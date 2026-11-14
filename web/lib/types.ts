@@ -10,19 +10,6 @@ export type Turn = {
   text: string;
   sources?: SourceRef[];
   grounded?: boolean;
-  timings?: Record<string, number>;
-};
-
-/** Shape returned by POST /voice/turn on the FastAPI backend. */
-export type VoiceTurn = {
-  session_id: string;
-  transcript: string;
-  response: string;
-  grounded: boolean;
-  sources: SourceRef[];
-  audio_base64: string;
-  audio_mime: string;
-  timings_ms: Record<string, number>;
 };
 
 /** Shape returned by POST /chat on the FastAPI backend. */
@@ -31,4 +18,19 @@ export type ChatTurn = {
   response: string;
   grounded: boolean;
   sources: SourceRef[];
+};
+
+export type ClinicSection = {
+  section: string;
+  content: string;
+};
+
+/** Shape returned by GET /documents: one knowledge base file. */
+export type ClinicDocument = {
+  source: string;
+  title: string;
+  category: string;
+  last_reviewed: string;
+  sections: ClinicSection[];
+  chunk_count: number;
 };

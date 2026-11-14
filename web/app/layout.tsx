@@ -3,9 +3,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bramble Court Surgery — Voice Assistant",
+  title: "Bramble Court Surgery — Knowledge Base",
   description:
-    "Ask the practice about opening hours, prescriptions, appointments and test results.",
+    "Read the practice documents, ask a question, and check each answer against the section it cites.",
 };
 
 export const viewport: Viewport = {

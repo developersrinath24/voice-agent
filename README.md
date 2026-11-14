@@ -7,6 +7,11 @@ generation, and stores every conversation so it can be reviewed later.
 Built as a learning project, with the goal of being deployable and defensible in
 a technical interview.
 
+The shipped demo is text-only: the knowledge base sits on the main screen beside
+the chat, so a visitor can read a passage and check the answer against it. The
+voice layer is built and tested but is not called by the demo, so opening the
+page costs no ElevenLabs credits.
+
 ## Status
 
 | Phase | Scope | State |
@@ -14,11 +19,11 @@ a technical interview.
 | 0 | Repo cleanup, config, tooling | Done |
 | 1 | Session/message persistence in Supabase | Done |
 | 2 | Knowledge base ingestion + Qdrant retrieval (LangChain) | Done |
-| 3 | RAG answer chain, DeepSeek primary / Gemini fallback | Done, needs an API key |
+| 3 | RAG answer chain, DeepSeek primary / Gemini fallback | Done |
 | 4 | Retrieval and answer quality evaluation | Next |
-| 5 | Speech-to-text / text-to-speech (ElevenLabs) | Turn-based `/voice/turn` done; realtime agent next |
-| 6 | Next.js voice client | Built locally, not yet deployed |
-| 7 | Deployment: Docker, Caddy, HTTPS, Oracle guide | Config ready, not yet deployed |
+| 5 | Speech-to-text / text-to-speech (ElevenLabs) | Turn-based `/voice/turn` done; realtime agent paused |
+| 6 | Next.js demo client: documents + chat on one screen | Done locally |
+| 7 | Deployment: native Python on OCI, Vercel for the web app | Runbook ready, not yet deployed |
 
 `POST /chat` runs the full pipeline: retrieve relevant clinic passages, answer
 from them, return citations, and persist both turns. It returns `503` until a
@@ -28,13 +33,13 @@ on its own.
 ## Architecture
 
 ```
-Browser / phone
+Browser
       |
-      |  voice + chat
+      |  chat + knowledge base
       v
 Next.js client  --------------------+
       |                             |
-      | HTTP                        | reads history
+      | HTTP (route handlers)       | reads history
       v                             v
 FastAPI backend  <->  Supabase (sessions, messages)
       |
@@ -43,7 +48,7 @@ FastAPI backend  <->  Supabase (sessions, messages)
              +--> Qdrant Cloud (knowledge base vectors, 384-dim cosine)
              +--> DeepSeek (primary LLM) -> Gemini (fallback)
       |
-      +--> ElevenLabs (STT + TTS)
+      +--> ElevenLabs (STT + TTS, unused by the demo)
 ```
 
 ## How an answer is produced
@@ -133,6 +138,7 @@ uv run python -m app.database.test_connection
 | --- | --- | --- |
 | `GET` | `/` | Service banner |
 | `GET` | `/health` | Liveness + which integrations are configured |
+| `GET` | `/documents` | The knowledge base, section by section (public) |
 | `POST` | `/chat` | RAG answer; creates a session if `session_id` is omitted |
 | `POST` | `/sessions` | Create a session explicitly |
 | `GET` | `/sessions/{id}` | Session status and message count |
@@ -144,10 +150,12 @@ uv run python -m app.database.test_connection
 `/chat` returns `grounded` and a `sources` array, so a client can show *why* an
 answer was given and flag ungrounded replies for review.
 
-When `API_KEY` is set, every endpoint except `/` and `/health` requires an
-`X-API-Key` header. `/health` stays open so a load balancer or uptime check needs
-no secret, and it reports which integrations are configured without exposing
-values.
+When `API_KEY` is set, every endpoint except `/`, `/health` and `/documents`
+requires an `X-API-Key` header. `/health` stays open so a load balancer or uptime
+check needs no secret, and it reports which integrations are configured without
+exposing values. `/documents` is open because the demo's whole claim is that a
+visitor can read the source: it is read-only, fictional, and costs nothing to
+serve.
 
 ### Voice
 
@@ -183,9 +191,10 @@ means the voice id has to come from the dashboard.
 
 ## Frontend
 
-`web/` is a Next.js client: tap the microphone, speak, hear the answer, with the
-transcript and the passages it came from shown alongside. Text input is the
-fallback when a microphone is unavailable.
+`web/` is a single-screen Next.js demo. On the left, every document in
+`knowledge_base/` rendered as it was written; on the right, the assistant. Each
+answer carries citations, and clicking one scrolls the reading pane to that
+section and highlights it — the answer and its evidence on one screen.
 
 ```bash
 cd web
@@ -196,8 +205,8 @@ npm run dev
 
 The browser never holds the API key: every call goes through a Next.js route
 handler that adds it server-side and forwards it to FastAPI. That also means no
-CORS for the audio upload. See [`web/README.md`](web/README.md) for the request
-flow and the Vercel deployment notes.
+CORS is needed. Below `lg` the two panes become tabs, so it still works on a
+phone. See [`web/README.md`](web/README.md) for the request flow.
 
 ## Deployment
 
@@ -216,6 +225,10 @@ sudo systemctl enable --now gp-voice-agent
 
 Step-by-step, including the two firewalls that catch most people out:
 [`deploy/ORACLE-NATIVE.md`](deploy/ORACLE-NATIVE.md).
+
+For the concrete run — `api-voice.horizonwebcraft.com` on the VM, the demo on
+Vercel, DNS first, exact environment variables:
+[`deploy/QUICKSTART.md`](deploy/QUICKSTART.md).
 
 **Docker:**
 
@@ -241,12 +254,13 @@ app/
   core/config.py        Settings loaded from .env
   api/deps.py           Shared dependencies (Supabase, assistant, voice, 503 handling)
   api/turns.py          Session resolution + history + user turn, shared by chat and voice
-  api/routes/           health, chat, sessions, search, voice
+  api/routes/           health, documents, chat, sessions, search, voice
   database/client.py    Lazy Supabase client
   database/repositories.py  All queries for sessions and messages
   schemas/              Pydantic request/response models
   rag/
     loaders.py          Markdown -> LangChain Documents (front matter, deterministic IDs)
+    catalog.py          The same chunks regrouped into whole sections for the demo
     embeddings.py       Local fastembed provider + LangChain adapter
     vector_store.py     QdrantVectorStore setup, filters, delete-by-source
     retriever.py        Query -> ranked chunks; prompt context formatting
@@ -259,8 +273,8 @@ app/
     clinic_assistant.py Retrieve -> ground -> answer chain
 db/migrations/          SQL migrations to run in Supabase
 knowledge_base/         Source clinic documents to ingest (fictional practice)
-web/                    Next.js voice client (mic, transcript, sources, playback)
-deploy/                 Caddyfile and the Oracle Cloud runbook
+web/                    Next.js demo (documents + chat on one screen)
+deploy/                 Caddyfile, systemd unit, Oracle runbooks
 tests/                  Pytest suite (fakes for Supabase, models and vectors)
 Dockerfile              uv-based image with the embedding model baked in
 docker-compose.yml      api + Caddy with automatic HTTPS

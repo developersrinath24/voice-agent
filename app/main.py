@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.deps import require_api_key
-from app.api.routes import chat, health, search, sessions, voice
+from app.api.routes import chat, documents, health, search, sessions, voice
 from app.core.config import settings
 from app.rag.embeddings import get_embedder
 
@@ -54,9 +54,12 @@ app.add_middleware(
 )
 
 app.include_router(health.router, tags=["Health"])
+# The knowledge base is public on purpose: the demo's whole claim is that you can
+# read the source and check the answer yourself.
+app.include_router(documents.router, tags=["Documents"])
 
-# Health and the banner stay open so a load balancer or uptime check needs no
-# secret. Everything with a database write or a model call is gated.
+# Health, the banner and the documents stay open so a load balancer or uptime
+# check needs no secret. Everything with a database write or a model call is gated.
 protected = [Depends(require_api_key)]
 app.include_router(chat.router, tags=["Chat"], dependencies=protected)
 app.include_router(sessions.router, tags=["Sessions"], dependencies=protected)
