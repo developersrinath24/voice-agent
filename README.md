@@ -18,7 +18,7 @@ a technical interview.
 | 4 | Retrieval and answer quality evaluation | Next |
 | 5 | Speech-to-text / text-to-speech (ElevenLabs) | Planned |
 | 6 | Next.js voice client | Planned |
-| 7 | Deployment (Oracle Cloud VM, domain, HTTPS) | Planned |
+| 7 | Deployment: Docker, Caddy, HTTPS, Oracle guide | Config ready, not yet deployed |
 
 `POST /chat` runs the full pipeline: retrieve relevant clinic passages, answer
 from them, return citations, and persist both turns. It returns `503` until a
@@ -144,6 +144,33 @@ uv run python -m app.database.test_connection
 `/chat` returns `grounded` and a `sources` array, so a client can show *why* an
 answer was given and flag ungrounded replies for review.
 
+When `API_KEY` is set, every endpoint except `/` and `/health` requires an
+`X-API-Key` header. `/health` stays open so a load balancer or uptime check needs
+no secret, and it reports which integrations are configured without exposing
+values.
+
+## Deployment
+
+```bash
+docker compose up -d --build
+docker compose exec api python -m app.rag.ingest
+```
+
+Two containers: the API, and Caddy terminating HTTPS with an automatic
+Let's Encrypt certificate. Full step-by-step for Oracle Cloud, including the
+firewall rules that catch most people out, is in
+[`deploy/ORACLE.md`](deploy/ORACLE.md).
+
+Both the database (Supabase) and the vector store (Qdrant Cloud) are external, so
+the VM holds no state except `.env`. The embedding model is baked into the image
+so the container works with outbound traffic restricted and the first request is
+not a 50 MB download.
+
+The API routes are sync `def`, not `async def`, on purpose: `supabase-py`,
+`fastembed` and the LangChain chain are all blocking, and FastAPI runs sync
+endpoints in a thread pool. Declaring them async would freeze the event loop for
+every other caller during a 2-second model call.
+
 ## Project layout
 
 ```
@@ -168,7 +195,10 @@ app/
     clinic_assistant.py Retrieve -> ground -> answer chain
 db/migrations/          SQL migrations to run in Supabase
 knowledge_base/         Source clinic documents to ingest (fictional practice)
+deploy/                 Caddyfile and the Oracle Cloud runbook
 tests/                  Pytest suite (fakes for Supabase, models and vectors)
+Dockerfile              uv-based image with the embedding model baked in
+docker-compose.yml      api + Caddy with automatic HTTPS
 ```
 
 ## Why LangChain

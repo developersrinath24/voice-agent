@@ -14,7 +14,7 @@ VectorStore = Annotated[QdrantVectorStore, Depends(vector_store.get_store)]
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search(request: SearchRequest, store: VectorStore) -> SearchResponse:
+def search(request: SearchRequest, store: VectorStore) -> SearchResponse:
     """Debug endpoint: what retrieval returns, before any LLM is involved.
 
     Reach for this when the assistant gives a wrong answer. If the right passage

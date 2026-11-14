@@ -1,11 +1,3 @@
-"""Ingestion CLI.
-
-    uv run python -m app.rag.ingest            # incremental: replace changed files
-    uv run python -m app.rag.ingest --rebuild  # drop the collection and re-index
-
-Embedding runs once, offline. Nothing here happens during a user request.
-"""
-
 import argparse
 import logging
 import time

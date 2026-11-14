@@ -1,11 +1,13 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.deps import require_api_key
 from app.api.routes import chat, health, search, sessions, voice
 from app.core.config import settings
+from app.rag.embeddings import get_embedder
 
 logging.basicConfig(
     level=settings.LOG_LEVEL.upper(),
@@ -24,6 +26,14 @@ async def lifespan(app: FastAPI):
         settings.supabase_configured,
         settings.qdrant_configured,
     )
+    # Load the embedding model on boot rather than inside the first user request,
+    # which otherwise pays a several-second model load.
+    try:
+        get_embedder().embed_query("warm up")
+        logger.info("embedding model ready")
+    except Exception:
+        logger.exception("embedding warm-up failed; the first request will retry")
+
     yield
     logger.info("shutdown complete")
 
@@ -44,10 +54,14 @@ app.add_middleware(
 )
 
 app.include_router(health.router, tags=["Health"])
-app.include_router(chat.router, tags=["Chat"])
-app.include_router(sessions.router, tags=["Sessions"])
-app.include_router(search.router, tags=["Search"])
-app.include_router(voice.router, tags=["Voice"])
+
+# Health and the banner stay open so a load balancer or uptime check needs no
+# secret. Everything with a database write or a model call is gated.
+protected = [Depends(require_api_key)]
+app.include_router(chat.router, tags=["Chat"], dependencies=protected)
+app.include_router(sessions.router, tags=["Sessions"], dependencies=protected)
+app.include_router(search.router, tags=["Search"], dependencies=protected)
+app.include_router(voice.router, tags=["Voice"], dependencies=protected)
 
 
 @app.get("/", tags=["Health"])

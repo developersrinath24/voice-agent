@@ -1,5 +1,3 @@
-"""Retrieval: question in, ranked clinic passages out."""
-
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -41,12 +39,6 @@ def retrieve(
     store: QdrantVectorStore | None = None,
     min_score: float | None = None,
 ) -> list[RetrievedChunk]:
-    """Embed the query and return the closest chunks.
-
-    ``min_score`` is a relevance floor. Without one, a vector search always
-    returns ``top_k`` results, even when the best match is unrelated — the usual
-    cause of a RAG bot confidently answering a question the corpus never covers.
-    """
     store = store or vector_store.get_vector_store()
 
     results = vector_store.similarity_search(
@@ -60,11 +52,6 @@ def retrieve(
 
 
 def format_context(chunks: Sequence[RetrievedChunk]) -> str:
-    """Render chunks for a prompt: numbered, with a source line each.
-
-    The numbering is what lets the model answer "according to [2]" and lets you
-    trace a wrong answer back to a specific chunk.
-    """
     if not chunks:
         return "No relevant clinic information was found."
 

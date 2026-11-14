@@ -1,5 +1,3 @@
-"""Qdrant access via LangChain's vector store integration."""
-
 from functools import lru_cache
 from typing import Any
 
@@ -25,12 +23,7 @@ def get_qdrant_client() -> QdrantClient:
 
 
 def ensure_collection(client: QdrantClient, dimension: int | None = None) -> bool:
-    """Create the collection if missing. Returns True when it was created.
 
-    Created explicitly rather than left to ``QdrantVectorStore`` so the vector
-    size is checked against the embedder: a mismatch would otherwise fail on the
-    first search with a cryptic Qdrant error.
-    """
     dimension = dimension or get_embedder().dimension
     collection = settings.QDRANT_COLLECTION
 
@@ -70,11 +63,6 @@ def get_vector_store(client: QdrantClient | None = None) -> QdrantVectorStore:
 
 
 def get_store() -> QdrantVectorStore:
-    """FastAPI-friendly wrapper.
-
-    Dependency functions must be callable with no arguments, otherwise FastAPI
-    tries to interpret ``client`` as a request parameter.
-    """
     return get_vector_store()
 
 
@@ -84,12 +72,6 @@ def add_documents(store: QdrantVectorStore, documents: list[Document], ids: list
 
 
 def delete_source(store: QdrantVectorStore, source: str) -> None:
-    """Remove every point that came from one file.
-
-    Deterministic IDs handle updates, but not deletions: a section removed from
-    the markdown would leave an orphan vector behind, which then shows up as a
-    citation to text that no longer exists.
-    """
     store.client.delete(
         collection_name=store.collection_name,
         points_selector=models.FilterSelector(

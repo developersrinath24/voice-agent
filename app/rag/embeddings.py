@@ -1,13 +1,3 @@
-"""Embeddings.
-
-``FastEmbedder`` is our provider: local ONNX, no API key, no per-request cost.
-``LangChainEmbeddings`` adapts it to LangChain's ``Embeddings`` interface so the
-rest of the stack (vector store, retrievers, chains) is provider-agnostic.
-
-Swapping to Gemini or OpenAI means writing one adapter and rebuilding the
-collection — the vector size is fixed when the collection is created.
-"""
-
 from collections.abc import Sequence
 from functools import lru_cache
 
@@ -19,13 +9,6 @@ EMBEDDING_DIM = 384
 
 
 class FastEmbedder:
-    """Local ONNX embeddings.
-
-    bge models are trained with different prompts for documents and queries, so
-    the two methods are deliberately separate: embedding a query through the
-    document path measurably hurts recall.
-    """
-
     name = MODEL_NAME
     dimension = EMBEDDING_DIM
 

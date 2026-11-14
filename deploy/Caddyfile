@@ -1,0 +1,25 @@
+# Caddy obtains and renews a Let's Encrypt certificate automatically once the
+# domain resolves to this machine and ports 80/443 are reachable.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Voice uploads will grow past the default; cap them anyway so a stray client
+	# cannot exhaust memory or bandwidth.
+	request_body {
+		max_size 25MB
+	}
+
+	reverse_proxy api:8000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

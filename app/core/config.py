@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
     ALLOWED_ORIGINS: str = "http://localhost:3000"
+    # When set, every paid endpoint requires an X-API-Key header. Leave empty for
+    # local development; set it before exposing the API to the internet.
+    API_KEY: str = ""
 
     # Supabase
     SUPABASE_URL: str = ""

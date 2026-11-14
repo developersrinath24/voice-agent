@@ -120,6 +120,25 @@ def test_voice_endpoint_reports_not_implemented(client):
     assert client.post("/voice/turn").status_code == 501
 
 
+def test_api_key_is_optional_locally(client, monkeypatch):
+    monkeypatch.setattr(settings, "API_KEY", "")
+    assert client.post("/sessions").status_code == 201
+
+
+def test_api_key_is_enforced_when_set(client, monkeypatch):
+    monkeypatch.setattr(settings, "API_KEY", "s3cret")
+
+    assert client.post("/sessions").status_code == 401
+    assert client.post("/sessions", headers={"X-API-Key": "wrong"}).status_code == 401
+    assert client.post("/sessions", headers={"X-API-Key": "s3cret"}).status_code == 201
+
+
+def test_health_stays_open_when_api_key_is_set(client, monkeypatch):
+    """A load balancer or uptime check must not need the shared secret."""
+    monkeypatch.setattr(settings, "API_KEY", "s3cret")
+    assert client.get("/health").status_code == 200
+
+
 def test_chat_returns_503_when_supabase_is_not_configured(monkeypatch):
     from fastapi.testclient import TestClient
 

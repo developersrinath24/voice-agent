@@ -17,11 +17,15 @@ HISTORY_LIMIT = 10
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(
+def chat(
     request: ChatRequest,
     client: SupabaseClient,
     assistant: Assistant,
 ) -> ChatResponse:
+    # Deliberately a sync endpoint: everything it calls is blocking (supabase-py,
+    # fastembed, the LLM chain). FastAPI runs sync endpoints in a thread pool, so
+    # a second caller waits on a worker instead of freezing the event loop for
+    # everyone else.
     if request.session_id is not None:
         session = repo.get_session(client, request.session_id)
         if session is None:

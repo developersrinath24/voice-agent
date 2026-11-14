@@ -1,15 +1,3 @@
-"""Load the clinic documents into LangChain ``Document`` objects.
-
-LangChain's splitter does the mechanical work; the policy stays ours:
-
-* one chunk per ``##`` section, because a chunk should be one answer
-* YAML front matter becomes metadata, so search can filter by category and the
-  API can cite a source
-* the document title and section heading are prefixed onto the embedded text,
-  which measurably improves matching on a corpus this small
-* chunk IDs are deterministic, so re-ingesting replaces instead of duplicating
-"""
-
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
@@ -26,11 +14,6 @@ MAX_CHUNK_CHARS = 1200
 
 
 def parse_front_matter(raw: str) -> tuple[dict[str, str], str]:
-    """Split flat ``key: value`` front matter from the markdown body.
-
-    Hand-rolled rather than pulling in a YAML parser for six keys. Unexpected
-    lines are ignored rather than fatal, so a typo cannot block ingestion.
-    """
     if not raw.startswith("---"):
         return {}, raw
 
@@ -110,11 +93,6 @@ def load_documents(root: Path = KNOWLEDGE_BASE_DIR) -> list[Document]:
 
 
 def document_id(document: Document) -> str:
-    """Deterministic ID from source, section and position.
-
-    Same document -> same ID -> ``add`` overwrites rather than duplicates, which
-    makes re-ingestion idempotent in both directions.
-    """
     meta = document.metadata
     return str(
         uuid5(
