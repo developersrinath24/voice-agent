@@ -53,15 +53,18 @@ Oracle's Ubuntu images ship a REJECT rule that drops everything except SSH, even
 after the security list is updated. On the VM:
 
 ```bash
-sudo iptables -L INPUT -n --line-numbers
+sudo iptables -S INPUT
 ```
 
-Find the line number of the `REJECT` rule (usually 6), then insert before it:
+Insert the ACCEPTs at the **top** of the chain. Do not insert at the REJECT's
+line number: the REJECT may be earlier than you expect, and a rule below it never
+matches.
 
 ```bash
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+sudo iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT
 sudo netfilter-persistent save
+sudo iptables -S INPUT      # verify: ACCEPTs above REJECT
 ```
 
 Without the save, the rules vanish on reboot.
@@ -183,6 +186,10 @@ use (~50 MB) into `FASTEMBED_CACHE_PATH`. Re-run this after editing anything in
 ## 8. Install the systemd service
 
 ```bash
+# The unit grants write access to this path; systemd refuses to start the
+# service (status 226/NAMESPACE) if it does not exist.
+mkdir -p /home/ubuntu/.cache/fastembed
+
 sudo cp deploy/gp-voice-agent.service /etc/systemd/system/
 # If you uploaded the files from Windows rather than cloning, strip CRLF:
 sudo sed -i 's/\r$//' /etc/systemd/system/gp-voice-agent.service
@@ -277,6 +284,6 @@ recurring cost is the model API.
 | `ModuleNotFoundError: app` | Service started from the wrong directory; check `WorkingDirectory` |
 | 502 from Caddy | App not listening; `systemctl status gp-voice-agent` |
 | Caddy `no such host` | DNS not propagated; wait, then `systemctl reload caddy` |
-| ACME connection refused | Ports 80/443 blocked — check both the security list and `iptables` |
+| ACME connection refused | Ports 80/443 blocked — check the security list/NSG **and** that the iptables ACCEPTs sit above the REJECT |
 | First request takes ~6s | Gemini cold start; later turns are ~2.5s |
 | Container-like restarts every 5s | systemd `Restart=always` doing its job; read `journalctl` |

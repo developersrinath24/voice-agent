@@ -59,11 +59,14 @@ Do **not** open `8000`. Caddy is the only door; the app binds `127.0.0.1`.
 after the security list is updated:
 
 ```bash
-sudo iptables -L INPUT -n --line-numbers
-# find the REJECT line (usually 6), then:
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+# Insert at the top: the image's REJECT sits before the end of the chain, so
+# appending (or inserting at the REJECT's line number) can land after it.
+sudo iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT
 sudo netfilter-persistent save
+
+# Both ACCEPTs must appear ABOVE the REJECT, or they never match.
+sudo iptables -S INPUT
 ```
 
 ## 4. Install Python 3.12, uv, Caddy
@@ -160,9 +163,22 @@ cd ~/voice-agent
 Expected: `done: 78 chunks in 10 files`. Ingestion is idempotent — it replaces
 each file's points and writes the same deterministic IDs.
 
+Then put the embedding model where the service will look for it. fastembed's
+default is `$TMPDIR/fastembed_cache`, which the unit overrides, so warm the cache
+explicitly — otherwise the first boot downloads 67 MB and every reboot repeats it:
+
+```bash
+mkdir -p /home/ubuntu/.cache/fastembed
+FASTEMBED_CACHE_PATH=/home/ubuntu/.cache/fastembed .venv/bin/python -c \
+  "from app.rag.embeddings import get_embedder; get_embedder().embed_query('warm up'); print('model cached')"
+```
+
 ## 9. Run it under systemd
 
 ```bash
+# systemd fails with 226/NAMESPACE if a ReadWritePaths target is missing.
+mkdir -p /home/ubuntu/.cache/fastembed
+
 sudo cp deploy/gp-voice-agent.service /etc/systemd/system/
 sudo sed -i 's/\r$//' /etc/systemd/system/gp-voice-agent.service
 sudo systemctl daemon-reload
@@ -260,7 +276,7 @@ Rotate the API key: `openssl rand -hex 24` → `.env` → restart → update
 
 | Symptom | Cause |
 | --- | --- |
-| `curl` to the domain times out | Security list **or** iptables; check both |
+| `curl` to the domain times out | Security list/NSG **or** iptables rule order (`-I INPUT 1`, above the REJECT) |
 | Caddy: `no such host`, `DNS problem` | A record missing/stale; `nslookup`, wait, reload |
 | 502 from Caddy | Service down: `systemctl status gp-voice-agent` |
 | Service restarts every 5s | Read `journalctl`; usually a bad `.env` value |

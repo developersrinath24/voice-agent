@@ -26,6 +26,10 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
+# Must exist before the service starts, or systemd fails with 226/NAMESPACE:
+#   mkdir -p /home/ubuntu/.cache/fastembed
+# fastembed otherwise caches to $TMPDIR/fastembed_cache, which PrivateTmp makes
+# private to the unit — the model would download again on every restart.
 ReadWritePaths=/home/ubuntu/.cache/fastembed
 ProtectKernelTunables=true
 ProtectControlGroups=true
