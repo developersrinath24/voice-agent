@@ -17,7 +17,7 @@ a technical interview.
 | 3 | RAG answer chain, DeepSeek primary / Gemini fallback | Done, needs an API key |
 | 4 | Retrieval and answer quality evaluation | Next |
 | 5 | Speech-to-text / text-to-speech (ElevenLabs) | Turn-based `/voice/turn` done; realtime agent next |
-| 6 | Next.js voice client | Planned |
+| 6 | Next.js voice client | Built locally, not yet deployed |
 | 7 | Deployment: Docker, Caddy, HTTPS, Oracle guide | Config ready, not yet deployed |
 
 `POST /chat` runs the full pipeline: retrieve relevant clinic passages, answer
@@ -181,6 +181,24 @@ Bella (`EXAVITQu4vr4xnSDxMaL`), a premade voice. A key scoped to text-to-speech
 and speech-to-text only also cannot call `/v1/voices` — that is fine, it just
 means the voice id has to come from the dashboard.
 
+## Frontend
+
+`web/` is a Next.js client: tap the microphone, speak, hear the answer, with the
+transcript and the passages it came from shown alongside. Text input is the
+fallback when a microphone is unavailable.
+
+```bash
+cd web
+cp .env.example .env.local     # API_BASE_URL, optional BACKEND_API_KEY
+npm install
+npm run dev
+```
+
+The browser never holds the API key: every call goes through a Next.js route
+handler that adds it server-side and forwards it to FastAPI. That also means no
+CORS for the audio upload. See [`web/README.md`](web/README.md) for the request
+flow and the Vercel deployment notes.
+
 ## Deployment
 
 Two supported paths to an Oracle Cloud VM. Both put Caddy in front for HTTPS and
@@ -241,6 +259,7 @@ app/
     clinic_assistant.py Retrieve -> ground -> answer chain
 db/migrations/          SQL migrations to run in Supabase
 knowledge_base/         Source clinic documents to ingest (fictional practice)
+web/                    Next.js voice client (mic, transcript, sources, playback)
 deploy/                 Caddyfile and the Oracle Cloud runbook
 tests/                  Pytest suite (fakes for Supabase, models and vectors)
 Dockerfile              uv-based image with the embedding model baked in
