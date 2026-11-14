@@ -1,34 +1,36 @@
-"""Qdrant access: collection setup, upserts and similarity search."""
+"""Qdrant access via LangChain's vector store integration."""
 
-from collections.abc import Sequence
 from functools import lru_cache
 from typing import Any
 
+from langchain_core.documents import Document
+from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient, models
 
 from app.core.config import settings
-from app.rag.embeddings import get_embedder
+from app.rag.embeddings import get_embedder, get_langchain_embeddings
 
-# Cosine is the right default for normalised text embeddings: scores land in
-# [-1, 1], so 0.65 means the same thing for every document.
 DISTANCE = models.Distance.COSINE
+
+# LangChain stores this shape by default: page content under one key, metadata
+# under another. Filters therefore need the ``metadata.`` prefix.
+METADATA_PREFIX = "metadata"
 
 
 @lru_cache
-def get_qdrant() -> QdrantClient:
+def get_qdrant_client() -> QdrantClient:
     if not settings.qdrant_configured:
         raise RuntimeError("Qdrant is not configured. Set QDRANT_URL and QDRANT_API_KEY in .env")
-    return QdrantClient(
-        url=settings.QDRANT_URL,
-        api_key=settings.QDRANT_API_KEY,
-        timeout=30,
-    )
+    return QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY, timeout=30)
 
 
-def ensure_collection(
-    client: QdrantClient, dimension: int | None = None, *, create_indexes: bool = True
-) -> bool:
-    """Create the collection if missing. Returns True when it was created."""
+def ensure_collection(client: QdrantClient, dimension: int | None = None) -> bool:
+    """Create the collection if missing. Returns True when it was created.
+
+    Created explicitly rather than left to ``QdrantVectorStore`` so the vector
+    size is checked against the embedder: a mismatch would otherwise fail on the
+    first search with a cryptic Qdrant error.
+    """
     dimension = dimension or get_embedder().dimension
     collection = settings.QDRANT_COLLECTION
 
@@ -46,75 +48,99 @@ def ensure_collection(
         collection_name=collection,
         vectors_config=models.VectorParams(size=dimension, distance=DISTANCE),
     )
-    # Payload indexes make filtered search cheap: without one, Qdrant scans every
-    # payload to resolve a category filter. They are a no-op in local mode.
-    if create_indexes:
-        for field_name in ("category", "source"):
-            client.create_payload_index(
-                collection_name=collection,
-                field_name=field_name,
-                field_schema=models.PayloadSchemaType.KEYWORD,
-            )
+    # Payload indexes make filtered search cheap: without one Qdrant scans every
+    # payload to resolve a category filter. No-ops in local mode.
+    for field_name in (f"{METADATA_PREFIX}.category", f"{METADATA_PREFIX}.source"):
+        client.create_payload_index(
+            collection_name=collection,
+            field_name=field_name,
+            field_schema=models.PayloadSchemaType.KEYWORD,
+        )
     return True
 
 
-def upsert_chunks(
-    client: QdrantClient, chunks: Sequence[Any], vectors: Sequence[Sequence[float]]
-) -> None:
-    points = [
-        models.PointStruct(id=chunk.id, vector=list(vector), payload=chunk.payload())
-        for chunk, vector in zip(chunks, vectors, strict=True)
-    ]
-    if points:
-        client.upsert(collection_name=settings.QDRANT_COLLECTION, points=points, wait=True)
-
-
-def delete_source(client: QdrantClient, source: str) -> None:
-    """Remove every point from one source file.
-
-    Re-ingesting a file means delete-then-insert, not insert: a section removed
-    from the markdown must also disappear from the index.
-    """
-    client.delete(
+def get_vector_store(client: QdrantClient | None = None) -> QdrantVectorStore:
+    client = client or get_qdrant_client()
+    ensure_collection(client)
+    return QdrantVectorStore(
+        client=client,
         collection_name=settings.QDRANT_COLLECTION,
+        embedding=get_langchain_embeddings(),
+    )
+
+
+def get_store() -> QdrantVectorStore:
+    """FastAPI-friendly wrapper.
+
+    Dependency functions must be callable with no arguments, otherwise FastAPI
+    tries to interpret ``client`` as a request parameter.
+    """
+    return get_vector_store()
+
+
+def add_documents(store: QdrantVectorStore, documents: list[Document], ids: list[str]) -> None:
+    if documents:
+        store.add_documents(documents, ids=ids)
+
+
+def delete_source(store: QdrantVectorStore, source: str) -> None:
+    """Remove every point that came from one file.
+
+    Deterministic IDs handle updates, but not deletions: a section removed from
+    the markdown would leave an orphan vector behind, which then shows up as a
+    citation to text that no longer exists.
+    """
+    store.client.delete(
+        collection_name=store.collection_name,
         points_selector=models.FilterSelector(
             filter=models.Filter(
-                must=[models.FieldCondition(key="source", match=models.MatchValue(value=source))]
+                must=[
+                    models.FieldCondition(
+                        key=f"{METADATA_PREFIX}.source",
+                        match=models.MatchValue(value=source),
+                    )
+                ]
             )
         ),
         wait=True,
     )
 
 
-def search(
-    client: QdrantClient,
-    vector: Sequence[float],
+def build_filter(category: str | None) -> models.Filter | None:
+    if not category:
+        return None
+    return models.Filter(
+        must=[
+            models.FieldCondition(
+                key=f"{METADATA_PREFIX}.category",
+                match=models.MatchValue(value=category),
+            )
+        ]
+    )
+
+
+def similarity_search(
+    store: QdrantVectorStore,
+    query: str,
     limit: int = 5,
     category: str | None = None,
     score_threshold: float | None = None,
-) -> list[models.ScoredPoint]:
-    query_filter = None
-    if category:
-        query_filter = models.Filter(
-            must=[models.FieldCondition(key="category", match=models.MatchValue(value=category))]
-        )
-
-    response = client.query_points(
-        collection_name=settings.QDRANT_COLLECTION,
-        query=list(vector),
-        limit=limit,
-        query_filter=query_filter,
+) -> list[tuple[Document, float]]:
+    return store.similarity_search_with_score(
+        query,
+        k=limit,
+        filter=build_filter(category),  # type: ignore[arg-type]
         score_threshold=score_threshold,
-        with_payload=True,
     )
-    return response.points
 
 
-def collection_stats(client: QdrantClient) -> dict[str, Any]:
+def collection_stats(client: QdrantClient | None = None) -> dict[str, Any]:
+    client = client or get_qdrant_client()
     info = client.get_collection(settings.QDRANT_COLLECTION)
+    vectors = info.config.params.vectors
     return {
         "name": settings.QDRANT_COLLECTION,
         "points": info.points_count,
-        "dimension": info.config.params.vectors.size,  # type: ignore[union-attr]
-        "distance": info.config.params.vectors.distance.name,  # type: ignore[union-attr]
+        "dimension": getattr(vectors, "size", None),
+        "distance": getattr(getattr(vectors, "distance", None), "name", None),
     }

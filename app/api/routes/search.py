@@ -1,35 +1,31 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from qdrant_client import QdrantClient
+from langchain_qdrant import QdrantVectorStore
 
 from app.rag import retriever, vector_store
-from app.rag.embeddings import EmbeddingProvider, get_embedder
 from app.schemas.search import SearchHit, SearchRequest, SearchResponse
 
 router = APIRouter()
 
-# Dependencies rather than direct calls, so tests can inject an in-memory Qdrant
-# client and a deterministic fake embedder.
-Embedder = Annotated[EmbeddingProvider, Depends(get_embedder)]
-Qdrant = Annotated[QdrantClient, Depends(vector_store.get_qdrant)]
+# A dependency rather than a direct call, so tests can inject an in-memory store
+# and a fake embedder.
+VectorStore = Annotated[QdrantVectorStore, Depends(vector_store.get_store)]
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search(request: SearchRequest, embedder: Embedder, client: Qdrant) -> SearchResponse:
-    """Debug endpoint: shows exactly what retrieval returns, before any LLM.
+async def search(request: SearchRequest, store: VectorStore) -> SearchResponse:
+    """Debug endpoint: what retrieval returns, before any LLM is involved.
 
-    This is the tool to reach for when the assistant gives a wrong answer. If the
-    right passage is not in these results, the problem is indexing or chunking,
-    not the model.
+    Reach for this when the assistant gives a wrong answer. If the right passage
+    is not in these results, the problem is indexing or chunking, not the model.
     """
     try:
         chunks = retriever.retrieve(
             request.query,
             top_k=request.top_k,
             category=request.category,
-            client=client,
-            embedder=embedder,
+            store=store,
             min_score=request.min_score,
         )
     except RuntimeError as exc:

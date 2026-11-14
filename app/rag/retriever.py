@@ -3,10 +3,10 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from qdrant_client import QdrantClient
+from langchain_core.documents import Document
+from langchain_qdrant import QdrantVectorStore
 
 from app.rag import vector_store
-from app.rag.embeddings import EmbeddingProvider, get_embedder
 
 
 @dataclass(frozen=True)
@@ -20,16 +20,16 @@ class RetrievedChunk:
     last_reviewed: str
 
     @classmethod
-    def from_scored_point(cls, point) -> "RetrievedChunk":
-        payload = point.payload or {}
+    def from_document(cls, document: Document, score: float) -> "RetrievedChunk":
+        meta = document.metadata
         return cls(
-            text=payload.get("text", ""),
-            score=float(point.score),
-            source=payload.get("source", ""),
-            document_title=payload.get("document_title", ""),
-            section=payload.get("section", ""),
-            category=payload.get("category", ""),
-            last_reviewed=payload.get("last_reviewed", ""),
+            text=document.page_content,
+            score=float(score),
+            source=meta.get("source", ""),
+            document_title=meta.get("document_title", ""),
+            section=meta.get("section", ""),
+            category=meta.get("category", ""),
+            last_reviewed=meta.get("last_reviewed", ""),
         )
 
 
@@ -38,33 +38,36 @@ def retrieve(
     top_k: int = 5,
     category: str | None = None,
     *,
-    client: QdrantClient | None = None,
-    embedder: EmbeddingProvider | None = None,
+    store: QdrantVectorStore | None = None,
     min_score: float | None = None,
 ) -> list[RetrievedChunk]:
     """Embed the query and return the closest chunks.
 
-    ``min_score`` is a relevance floor. Without one, Qdrant always returns
-    ``top_k`` results, even when the best match is unrelated — the classic cause
-    of a RAG bot confidently answering a question the knowledge base never
-    covers.
+    ``min_score`` is a relevance floor. Without one, a vector search always
+    returns ``top_k`` results, even when the best match is unrelated — the usual
+    cause of a RAG bot confidently answering a question the corpus never covers.
     """
-    client = client or vector_store.get_qdrant()
-    embedder = embedder or get_embedder()
+    store = store or vector_store.get_vector_store()
 
-    vector = embedder.embed_query(query)
-    points = vector_store.search(
-        client,
-        vector,
+    results = vector_store.similarity_search(
+        store,
+        query,
         limit=top_k,
         category=category,
         score_threshold=min_score,
     )
-    return [RetrievedChunk.from_scored_point(point) for point in points]
+    return [RetrievedChunk.from_document(document, score) for document, score in results]
 
 
 def format_context(chunks: Sequence[RetrievedChunk]) -> str:
-    """Render retrieved chunks for a prompt: numbered, with a source line each."""
+    """Render chunks for a prompt: numbered, with a source line each.
+
+    The numbering is what lets the model answer "according to [2]" and lets you
+    trace a wrong answer back to a specific chunk.
+    """
+    if not chunks:
+        return "No relevant clinic information was found."
+
     blocks = []
     for index, chunk in enumerate(chunks, start=1):
         blocks.append(f"[{index}] {chunk.document_title} — {chunk.section}\n{chunk.text}")

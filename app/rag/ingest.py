@@ -3,7 +3,7 @@
     uv run python -m app.rag.ingest            # incremental: replace changed files
     uv run python -m app.rag.ingest --rebuild  # drop the collection and re-index
 
-Embedding happens once, offline. Nothing here runs during a user request.
+Embedding runs once, offline. Nothing here happens during a user request.
 """
 
 import argparse
@@ -13,8 +13,8 @@ from collections import Counter
 
 from app.core.config import settings
 from app.rag import vector_store
-from app.rag.chunking import KNOWLEDGE_BASE_DIR, Chunk, load_chunks
 from app.rag.embeddings import get_embedder
+from app.rag.loaders import KNOWLEDGE_BASE_DIR, document_id, load_documents
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)-8s | %(message)s")
 logger = logging.getLogger("ingest")
@@ -25,46 +25,50 @@ BATCH_SIZE = 64
 def ingest(rebuild: bool = False) -> dict:
     started = time.perf_counter()
 
-    embedder = get_embedder()
-    client = vector_store.get_qdrant()
+    client = vector_store.get_qdrant_client()
+    collection = settings.QDRANT_COLLECTION
 
-    if rebuild and client.collection_exists(settings.QDRANT_COLLECTION):
-        logger.info("dropping collection %s", settings.QDRANT_COLLECTION)
-        client.delete_collection(settings.QDRANT_COLLECTION)
+    if rebuild and client.collection_exists(collection):
+        logger.info("dropping collection %s", collection)
+        client.delete_collection(collection)
 
-    created = vector_store.ensure_collection(client, embedder.dimension)
+    created = vector_store.ensure_collection(client)
     logger.info(
-        "%s collection %s (%d dims)",
+        "%s collection %s (%d dims, %s)",
         "created" if created else "using existing",
-        settings.QDRANT_COLLECTION,
-        embedder.dimension,
+        collection,
+        get_embedder().dimension,
+        vector_store.DISTANCE.name,
     )
 
-    chunks: list[Chunk] = load_chunks()
-    by_source: dict[str, list[Chunk]] = {}
-    for chunk in chunks:
-        by_source.setdefault(chunk.source, []).append(chunk)
+    documents = load_documents()
+    store = vector_store.get_vector_store(client)
 
-    for source, source_chunks in by_source.items():
-        vector_store.delete_source(client, source)
-        for start in range(0, len(source_chunks), BATCH_SIZE):
-            batch = source_chunks[start : start + BATCH_SIZE]
-            vectors = embedder.embed_documents([chunk.text for chunk in batch])
-            vector_store.upsert_chunks(client, batch, vectors)
-        logger.info("indexed %-32s %2d chunks", source, len(source_chunks))
+    by_source: dict[str, list] = {}
+    for document in documents:
+        by_source.setdefault(document.metadata["source"], []).append(document)
+
+    for source, source_documents in by_source.items():
+        # Delete first: deterministic IDs cover edits, but not sections that were
+        # removed from the file.
+        vector_store.delete_source(store, source)
+        for start in range(0, len(source_documents), BATCH_SIZE):
+            batch = source_documents[start : start + BATCH_SIZE]
+            vector_store.add_documents(store, batch, [document_id(d) for d in batch])
+        logger.info("indexed %-32s %2d chunks", source, len(source_documents))
 
     stats = vector_store.collection_stats(client)
     elapsed = time.perf_counter() - started
 
     summary = {
         "files": len(by_source),
-        "chunks": len(chunks),
-        "categories": dict(Counter(chunk.category for chunk in chunks)),
+        "chunks": len(documents),
+        "categories": dict(Counter(d.metadata["category"] for d in documents)),
         "collection": stats,
+        "embedder": get_embedder().name,
         "seconds": round(elapsed, 2),
-        "embedder": embedder.name,
     }
-    logger.info("done: %s chunks in %s files, %.2fs", len(chunks), len(by_source), elapsed)
+    logger.info("done: %s chunks in %s files, %.2fs", len(documents), len(by_source), elapsed)
     return summary
 
 

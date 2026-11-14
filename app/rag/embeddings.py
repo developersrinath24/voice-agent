@@ -1,47 +1,37 @@
-"""Embedding providers.
+"""Embeddings.
 
-The retrieval code only depends on the small ``EmbeddingProvider`` protocol, so
-swapping local fastembed for a hosted model (Gemini, OpenAI, Voyage) means adding
-one class and re-indexing — no changes to chunking, storage or search.
+``FastEmbedder`` is our provider: local ONNX, no API key, no per-request cost.
+``LangChainEmbeddings`` adapts it to LangChain's ``Embeddings`` interface so the
+rest of the stack (vector store, retrievers, chains) is provider-agnostic.
 
-Whatever you choose, the vector size is baked into the Qdrant collection when it
-is created. Changing provider later means changing ``dimension`` and rebuilding
-the collection.
+Swapping to Gemini or OpenAI means writing one adapter and rebuilding the
+collection — the vector size is fixed when the collection is created.
 """
 
 from collections.abc import Sequence
 from functools import lru_cache
-from typing import Protocol
 
 from fastembed import TextEmbedding
+from langchain_core.embeddings import Embeddings
 
 MODEL_NAME = "BAAI/bge-small-en-v1.5"
 EMBEDDING_DIM = 384
 
 
-class EmbeddingProvider(Protocol):
-    name: str
-    dimension: int
-
-    def embed_documents(self, texts: Sequence[str]) -> list[list[float]]: ...
-
-    def embed_query(self, text: str) -> list[float]: ...
-
-
 class FastEmbedder:
-    """Local ONNX embeddings. No API key, no per-request cost.
+    """Local ONNX embeddings.
 
     bge models are trained with different prompts for documents and queries, so
-    ``embed_documents`` and ``embed_query`` are deliberately separate: feeding a
-    query through the document path measurably hurts recall.
+    the two methods are deliberately separate: embedding a query through the
+    document path measurably hurts recall.
     """
 
     name = MODEL_NAME
     dimension = EMBEDDING_DIM
 
     def __init__(self) -> None:
-        # The model weights (~50 MB) are downloaded on first use, then cached on
-        # disk. Keeping construction lazy means importing the app stays fast.
+        # Weights (~50 MB) download on first use. Lazy construction keeps app
+        # start-up and tests fast.
         self._model: TextEmbedding | None = None
 
     @property
@@ -58,6 +48,24 @@ class FastEmbedder:
         return [float(value) for value in vector]
 
 
+class LangChainEmbeddings(Embeddings):
+    """Thin adapter so LangChain components can use a local model."""
+
+    def __init__(self, provider: FastEmbedder | None = None) -> None:
+        self.provider = provider or FastEmbedder()
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self.provider.embed_documents(texts)
+
+    def embed_query(self, text: str) -> list[float]:
+        return self.provider.embed_query(text)
+
+
 @lru_cache
 def get_embedder() -> FastEmbedder:
     return FastEmbedder()
+
+
+@lru_cache
+def get_langchain_embeddings() -> LangChainEmbeddings:
+    return LangChainEmbeddings(get_embedder())

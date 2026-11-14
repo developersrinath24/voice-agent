@@ -15,8 +15,18 @@ class ChatRequest(BaseModel):
     )
 
 
+class SourceRef(BaseModel):
+    """One retrieved passage the answer was built from."""
+
+    section: str
+    source: str
+    score: float
+
+
 class ChatResponse(BaseModel):
     session_id: UUID
     response: str
     status: str = "success"
     message_count: int = 0
+    grounded: bool = True
+    sources: list[SourceRef] = Field(default_factory=list)

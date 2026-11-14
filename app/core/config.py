@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     ELEVENLABS_API_KEY: str = ""
     ELEVENLABS_AGENT_ID: str = ""
 
+    # Retrieval
+    RETRIEVAL_TOP_K: int = 5
+    RETRIEVAL_MIN_SCORE: float = 0.5
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

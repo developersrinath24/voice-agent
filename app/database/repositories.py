@@ -54,6 +54,23 @@ def list_messages(client: Client, session_id: UUID, limit: int = 50) -> list[dic
     return result.data or []
 
 
+def recent_messages(client: Client, session_id: UUID, limit: int = 10) -> list[dict[str, Any]]:
+    """Most recent turns, returned oldest-to-newest.
+
+    Ordered descending in the query so the limit keeps the *latest* turns, then
+    reversed because a model expects the transcript in conversation order.
+    """
+    result = (
+        client.table(MESSAGES)
+        .select(MESSAGE_COLUMNS)
+        .eq("session_id", str(session_id))
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return list(reversed(result.data or []))
+
+
 def add_message(
     client: Client,
     session_id: UUID,
