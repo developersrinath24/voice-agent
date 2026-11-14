@@ -1,0 +1,28 @@
+# Caddy config for a native (non-Docker) deployment.
+#
+#   sudo sed "s/{\$DOMAIN}/clinic.yourdomain.com/" deploy/Caddyfile.native \
+#     | sudo tee /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# The app listens on 127.0.0.1:8000, so only Caddy on this machine can reach it.
+{$DOMAIN} {
+	encode zstd gzip
+
+	request_body {
+		max_size 25MB
+	}
+
+	reverse_proxy 127.0.0.1:8000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

@@ -151,20 +151,32 @@ values.
 
 ## Deployment
 
+Two supported paths to an Oracle Cloud VM. Both put Caddy in front for HTTPS and
+leave the app bound to localhost; Supabase (database) and Qdrant Cloud (vectors)
+stay external, so the VM holds no state except `.env`.
+
+**Native — Python + uv + systemd** (no Docker):
+
+```bash
+uv sync --frozen --no-dev
+.venv/bin/python -m app.rag.ingest
+sudo cp deploy/gp-voice-agent.service /etc/systemd/system/
+sudo systemctl enable --now gp-voice-agent
+```
+
+Step-by-step, including the two firewalls that catch most people out:
+[`deploy/ORACLE-NATIVE.md`](deploy/ORACLE-NATIVE.md).
+
+**Docker:**
+
 ```bash
 docker compose up -d --build
 docker compose exec api python -m app.rag.ingest
 ```
 
-Two containers: the API, and Caddy terminating HTTPS with an automatic
-Let's Encrypt certificate. Full step-by-step for Oracle Cloud, including the
-firewall rules that catch most people out, is in
-[`deploy/ORACLE.md`](deploy/ORACLE.md).
-
-Both the database (Supabase) and the vector store (Qdrant Cloud) are external, so
-the VM holds no state except `.env`. The embedding model is baked into the image
-so the container works with outbound traffic restricted and the first request is
-not a 50 MB download.
+The image bakes the embedding model in, so the first request is not a 50 MB
+download and the container works with outbound traffic restricted. See
+[`deploy/ORACLE-DOCKER.md`](deploy/ORACLE-DOCKER.md).
 
 The API routes are sync `def`, not `async def`, on purpose: `supabase-py`,
 `fastembed` and the LangChain chain are all blocking, and FastAPI runs sync
