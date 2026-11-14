@@ -63,7 +63,7 @@ class FakeTable:
         now = datetime.now(UTC).isoformat()
         base = {"id": str(uuid4()), "created_at": now}
         if self.name == "sessions":
-            base.update({"channel": "web", "status": "active", "ended_at": None, "updated_at": now})
+            base.update({"status": "active", "updated_at": now})
         return {**base, **row}
 
     def execute(self) -> FakeResult:

@@ -5,11 +5,7 @@ from supabase import Client
 
 from app.api.deps import SupabaseClient
 from app.database import repositories as repo
-from app.schemas.session import (
-    MessageResponse,
-    SessionCreateRequest,
-    SessionResponse,
-)
+from app.schemas.session import MessageResponse, SessionResponse
 
 router = APIRouter(prefix="/sessions")
 
@@ -19,29 +15,18 @@ def _to_response(client: Client, session: dict) -> SessionResponse:
     return SessionResponse(
         session_id=session_id,
         status=session["status"],
-        channel=session.get("channel", "web"),
         message_count=repo.count_messages(client, session_id),
         created_at=session.get("created_at"),
     )
 
 
 @router.post("", response_model=SessionResponse, status_code=201)
-async def create_session(
-    request: SessionCreateRequest,
-    client: SupabaseClient,
-) -> SessionResponse:
-    if request.channel not in {"web", "voice"}:
-        raise HTTPException(status_code=422, detail="channel must be 'web' or 'voice'")
-
-    session = repo.create_session(client, channel=request.channel)
-    return _to_response(client, session)
+async def create_session(client: SupabaseClient) -> SessionResponse:
+    return _to_response(client, repo.create_session(client))
 
 
 @router.get("/{session_id}", response_model=SessionResponse)
-async def get_session(
-    session_id: UUID,
-    client: SupabaseClient,
-) -> SessionResponse:
+async def get_session(session_id: UUID, client: SupabaseClient) -> SessionResponse:
     session = repo.get_session(client, session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -49,10 +34,7 @@ async def get_session(
 
 
 @router.get("/{session_id}/messages", response_model=list[MessageResponse])
-async def get_messages(
-    session_id: UUID,
-    client: SupabaseClient,
-) -> list[MessageResponse]:
+async def get_messages(session_id: UUID, client: SupabaseClient) -> list[MessageResponse]:
     session = repo.get_session(client, session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -69,10 +51,7 @@ async def get_messages(
 
 
 @router.post("/{session_id}/end", response_model=SessionResponse)
-async def end_session(
-    session_id: UUID,
-    client: SupabaseClient,
-) -> SessionResponse:
+async def end_session(session_id: UUID, client: SupabaseClient) -> SessionResponse:
     session = repo.get_session(client, session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")

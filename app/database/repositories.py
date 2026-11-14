@@ -2,9 +2,12 @@
 
 All queries take an explicit Supabase client, which keeps this layer easy to
 fake in tests.
+
+Column lists are explicit rather than ``select("*")`` so an unexpected schema
+change fails loudly here instead of quietly leaking columns into an API
+response.
 """
 
-from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -13,12 +16,12 @@ from supabase import Client
 SESSIONS = "sessions"
 MESSAGES = "messages"
 
-SESSION_COLUMNS = "id,channel,status,created_at,updated_at,ended_at"
-MESSAGE_COLUMNS = "id,session_id,role,content,created_at,latency_ms,model"
+SESSION_COLUMNS = "id,status,created_at,updated_at"
+MESSAGE_COLUMNS = "id,session_id,role,content,created_at"
 
 
-def create_session(client: Client, channel: str = "web") -> dict[str, Any]:
-    result = client.table(SESSIONS).insert({"channel": channel}).execute()
+def create_session(client: Client) -> dict[str, Any]:
+    result = client.table(SESSIONS).insert({"status": "active"}).execute()
     return result.data[0]
 
 
@@ -56,37 +59,15 @@ def add_message(
     session_id: UUID,
     role: str,
     content: str,
-    *,
-    latency_ms: int | None = None,
-    model: str | None = None,
-    metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "session_id": str(session_id),
-        "role": role,
-        "content": content,
-    }
-    if latency_ms is not None:
-        payload["latency_ms"] = latency_ms
-    if model is not None:
-        payload["model"] = model
-    if metadata is not None:
-        payload["metadata"] = metadata
-
-    result = client.table(MESSAGES).insert(payload).execute()
+    result = (
+        client.table(MESSAGES)
+        .insert({"session_id": str(session_id), "role": role, "content": content})
+        .execute()
+    )
     return result.data[0]
 
 
 def end_session(client: Client, session_id: UUID) -> dict[str, Any] | None:
-    result = (
-        client.table(SESSIONS)
-        .update(
-            {
-                "status": "ended",
-                "ended_at": datetime.now(UTC).isoformat(),
-            }
-        )
-        .eq("id", str(session_id))
-        .execute()
-    )
+    result = client.table(SESSIONS).update({"status": "ended"}).eq("id", str(session_id)).execute()
     return result.data[0] if result.data else None

@@ -31,7 +31,7 @@ async def chat(
         if session["status"] != "active":
             raise HTTPException(status_code=409, detail="Session has already ended")
     else:
-        session = repo.create_session(client, channel="web")
+        session = repo.create_session(client)
 
     session_id = UUID(session["id"])
 

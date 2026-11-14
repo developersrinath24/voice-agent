@@ -57,9 +57,9 @@ def test_chat_rejects_malformed_session_id(client):
 
 
 def test_session_history_round_trip(client):
-    created = client.post("/sessions", json={"channel": "voice"}).json()
+    created = client.post("/sessions").json()
     session_id = created["session_id"]
-    assert created["channel"] == "voice"
+    assert created["status"] == "active"
     assert created["message_count"] == 0
 
     client.post("/chat", json={"message": "I need a repeat prescription", "session_id": session_id})
