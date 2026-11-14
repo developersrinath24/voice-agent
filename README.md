@@ -69,6 +69,24 @@ Three properties are deliberate:
   because "I don't have that information" is the wrong reply to "I have chest
   pain".
 
+## Models
+
+`LLM_ORDER` controls the call order; providers without an API key are skipped
+automatically.
+
+| Provider | Model | Notes |
+| --- | --- | --- |
+| Gemini | `gemini-3.5-flash-lite` | Default. ~2.1s per answer, free tier. |
+| Gemini | `gemini-3.5-flash` | ~5.9s per answer, longer, slightly richer. |
+| DeepSeek | `deepseek-flash` | DeepSeek-V4.1-Flash, 1M context. Needs account credit. |
+
+Measured on the same two clinic questions through the full chain. `lite` models
+use fixed sampling, so `temperature` is not sent to them.
+
+`gemini-2.5-flash` is **no longer available to new users** (404), and
+`deepseek-chat` was superseded by `deepseek-flash`. Both names appear in older
+tutorials; neither works today.
+
 ## Local setup
 
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).

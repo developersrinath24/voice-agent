@@ -21,11 +21,13 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION: str = "clinic_knowledge"
 
     # LLM
+    # Call order. Providers listed without an API key are skipped automatically.
+    LLM_ORDER: str = "gemini,deepseek"
     DEEPSEEK_API_KEY: str = ""
-    DEEPSEEK_MODEL: str = "deepseek-chat"
+    DEEPSEEK_MODEL: str = "deepseek-flash"
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
-    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
     # Voice
     ELEVENLABS_API_KEY: str = ""
