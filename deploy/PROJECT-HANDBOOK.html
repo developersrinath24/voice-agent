@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bramble Court Surgery Voice RAG — Interview Handbook</title>
+<style>
+  :root { --ink:#172033; --muted:#586579; --teal:#087f78; --teal2:#dff7f4; --blue:#e9f1ff; --amber:#fff4d6; --red:#ffebea; --line:#d9e0e8; --code:#f3f6f9; }
+  * { box-sizing:border-box; }
+  html { font-size:10.4pt; }
+  body { margin:0; color:var(--ink); font-family:Arial,"Segoe UI",sans-serif; line-height:1.42; }
+  @page { size:A4; margin:15mm 15mm 17mm; }
+  h1,h2,h3,h4 { color:#0f2639; line-height:1.15; break-after:avoid; }
+  h1 { font-size:28pt; margin:0 0 8px; }
+  h2 { font-size:19pt; border-bottom:2px solid var(--teal); padding-bottom:5px; margin:26px 0 11px; }
+  h3 { font-size:13.5pt; margin:18px 0 7px; }
+  h4 { font-size:11pt; margin:13px 0 5px; }
+  p { margin:5px 0 9px; }
+  ul,ol { margin:5px 0 10px; padding-left:22px; }
+  li { margin:2px 0; }
+  a { color:var(--teal); }
+  code { font-family:Consolas,"Courier New",monospace; background:var(--code); padding:1px 4px; border-radius:3px; font-size:9pt; }
+  pre { font-family:Consolas,"Courier New",monospace; font-size:8.4pt; line-height:1.34; background:#162232; color:#f4f7fb; padding:10px 12px; border-radius:7px; overflow-wrap:anywhere; white-space:pre-wrap; break-inside:avoid; }
+  table { width:100%; border-collapse:collapse; margin:8px 0 13px; font-size:9.1pt; break-inside:avoid; }
+  th,td { border:1px solid var(--line); padding:5px 7px; vertical-align:top; }
+  th { background:#edf3f6; text-align:left; color:#17384d; }
+  .cover { min-height:245mm; display:flex; flex-direction:column; justify-content:center; page-break-after:always; }
+  .kicker { color:var(--teal); font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
+  .subtitle { font-size:16pt; color:var(--muted); max-width:650px; }
+  .cover-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:30px; }
+  .cover-card,.card { border:1px solid var(--line); border-radius:9px; padding:11px 13px; background:#fff; break-inside:avoid; }
+  .cover-card strong { color:var(--teal); display:block; margin-bottom:3px; }
+  .small { color:var(--muted); font-size:8.8pt; }
+  .callout { border-left:5px solid var(--teal); background:var(--teal2); padding:9px 12px; margin:10px 0; break-inside:avoid; }
+  .warning { border-left-color:#d18a00; background:var(--amber); }
+  .danger { border-left-color:#c44035; background:var(--red); }
+  .interview { border-left-color:#3e6eb7; background:var(--blue); }
+  .tag { display:inline-block; border-radius:12px; padding:2px 7px; margin:1px; background:#e8f0f3; font-size:8pt; font-weight:700; }
+  .path { color:#064e4a; font-family:Consolas,monospace; font-size:8.8pt; }
+  .diagram { margin:10px 0 15px; padding:12px; border:1px solid var(--line); border-radius:9px; background:#fbfcfd; break-inside:avoid; }
+  .flow { display:flex; align-items:stretch; justify-content:center; gap:6px; flex-wrap:wrap; }
+  .node { min-width:105px; max-width:155px; flex:1; text-align:center; padding:8px 6px; border:2px solid #76a8a5; border-radius:8px; background:#fff; }
+  .node b { display:block; color:#0a5f5a; }
+  .node.blue { border-color:#8aa9dc; }
+  .node.amber { border-color:#d7ad54; }
+  .arrow { display:flex; align-items:center; color:#67778b; font-size:16pt; font-weight:700; }
+  .lane { display:grid; grid-template-columns:105px 1fr; border-top:1px solid var(--line); padding:5px 0; }
+  .lane:first-child { border-top:0; }
+  .lane > b { color:#0a5f5a; }
+  .toc { columns:2; column-gap:30px; }
+  .toc li { break-inside:avoid; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .page { page-break-before:always; }
+  .avoid { break-inside:avoid; }
+  .answer { font-weight:700; color:#0a5f5a; }
+  .footer-note { margin-top:25px; border-top:1px solid var(--line); padding-top:7px; color:var(--muted); font-size:8pt; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="kicker">Interview study handbook</div>
+  <h1>Bramble Court Surgery<br>Voice-first RAG Assistant</h1>
+  <p class="subtitle">A concise but complete guide to the architecture, code, libraries, retrieval strategy, realtime voice integration, deployment, security, caching, testing, trade-offs, and interview answers.</p>
+  <div class="cover-grid">
+    <div class="cover-card"><strong>Backend</strong>FastAPI · LangChain · FastEmbed · Qdrant · Supabase</div>
+    <div class="cover-card"><strong>Voice</strong>ElevenLabs Agents · Custom LLM · WebSocket · SSE</div>
+    <div class="cover-card"><strong>Frontend</strong>Next.js · React · TypeScript · Tailwind · Vercel</div>
+    <div class="cover-card"><strong>Infrastructure</strong>OCI Ubuntu · uv · systemd · Caddy · HTTPS</div>
+  </div>
+  <div class="callout interview" style="margin-top:30px">
+    <b>How to use this:</b> read sections 1–5 first, then explain each diagram aloud without looking. Use the final question bank for rehearsal. The file paths are deliberately included so every explanation can be tied back to real code.
+  </div>
+  <p class="small">Project: fictional NHS practice demo. This is not a medical device and contains no real patient data.</p>
+</section>
+
+<h2>Contents</h2>
+<ol class="toc">
+  <li>Thirty-second project explanation</li>
+  <li>System architecture and trust boundaries</li>
+  <li>Repository map and request endpoints</li>
+  <li>Technology and package reference</li>
+  <li>RAG ingestion: documents to vectors</li>
+  <li>RAG query: question to grounded answer</li>
+  <li>Prompting, safety and hallucination control</li>
+  <li>Sessions and Supabase persistence</li>
+  <li>Realtime ElevenLabs voice architecture</li>
+  <li>The older turn-based voice path</li>
+  <li>Frontend architecture and citation UX</li>
+  <li>Caching, latency and performance</li>
+  <li>Security model</li>
+  <li>Deployment and production topology</li>
+  <li>Testing and observability</li>
+  <li>Trade-offs, limitations and improvements</li>
+  <li>Interview question bank</li>
+  <li>Final revision cheat sheet</li>
+</ol>
+
+<h2 class="page">1. The project in 30 seconds</h2>
+<div class="callout interview">
+  <b>Memorise this answer:</b> “I built a voice-first RAG receptionist for a fictional GP surgery. Clinic Markdown documents are split by semantic headings, embedded locally with BGE-small, and stored in Qdrant. For each question, the API retrieves the top five passages above a relevance threshold, inserts them into a safety-focused prompt, and calls Gemini with DeepSeek available as a configurable fallback. Text sessions are persisted in Supabase and return citations. For live voice, ElevenLabs handles streaming audio, speech recognition, turn detection, interruption and TTS, while calling my OpenAI-compatible SSE endpoint as its custom LLM. The Next.js frontend proxies secrets server-side, and the stack runs on OCI behind Caddy with HTTPS while the UI is on Vercel.”
+</div>
+
+<h3>The business problem</h3>
+<p>Patients repeatedly ask factual questions—opening hours, prescription lead times, appointment rules, registration and out-of-hours care. A normal LLM may confidently invent an answer. This system constrains answers to a small, inspectable knowledge base and lets a visitor click the cited source.</p>
+
+<h3>The central design principle</h3>
+<p><b>Voice is an interface; RAG is the knowledge system.</b> Text chat, recorded voice and realtime voice all reuse <code>ClinicAssistant.answer()</code>. This prevents three channels from developing three different truth sources.</p>
+
+<h2>2. System architecture</h2>
+<div class="diagram">
+  <div class="flow">
+    <div class="node"><b>Browser</b>Documents, text chat, microphone</div><div class="arrow">→</div>
+    <div class="node blue"><b>Next.js / Vercel</b>UI + secret-hiding proxy</div><div class="arrow">→</div>
+    <div class="node"><b>Caddy / OCI</b>TLS + reverse proxy</div><div class="arrow">→</div>
+    <div class="node blue"><b>FastAPI</b>Routes + RAG orchestration</div>
+  </div>
+  <div class="flow" style="margin-top:10px">
+    <div class="node amber"><b>Supabase</b>Sessions and messages</div>
+    <div class="node amber"><b>Qdrant Cloud</b>384-d vectors + metadata</div>
+    <div class="node amber"><b>Gemini / DeepSeek</b>Answer generation</div>
+    <div class="node amber"><b>ElevenLabs</b>ASR, turn-taking, TTS</div>
+  </div>
+</div>
+
+<h3>Responsibilities</h3>
+<table>
+<tr><th>Component</th><th>Owns</th><th>Does not own</th></tr>
+<tr><td>Browser</td><td>Interaction, microphone permission, transcript display, 90-second UI timer</td><td>API keys, retrieval, model calls</td></tr>
+<tr><td>Next.js</td><td>Presentation and same-origin route handlers that attach <code>X-API-Key</code></td><td>RAG logic</td></tr>
+<tr><td>FastAPI</td><td>Validation, auth, sessions, retrieval, prompts, provider failover, voice session issuing</td><td>Realtime audio transport</td></tr>
+<tr><td>ElevenLabs Agent</td><td>WebSocket audio, ASR, voice activity/turn detection, interruptions, TTS</td><td>Clinic truth; it asks our custom LLM</td></tr>
+<tr><td>Qdrant</td><td>Nearest-neighbour vector search and metadata filters</td><td>Generating answers</td></tr>
+<tr><td>Supabase</td><td>Relational text-chat session history</td><td>Vector search</td></tr>
+</table>
+
+<h3>Trust boundaries and secrets</h3>
+<div class="diagram">
+  <div class="lane"><b>Public</b><span><code>GET /</code>, <code>GET /health</code>, <code>GET /documents</code> — no paid work.</span></div>
+  <div class="lane"><b>Browser → Next</b><span>Same-origin requests; the browser never receives backend credentials.</span></div>
+  <div class="lane"><b>Next → FastAPI</b><span><code>BACKEND_API_KEY</code> becomes <code>X-API-Key</code>.</span></div>
+  <div class="lane"><b>ElevenLabs → API</b><span>Separate <code>AGENT_LLM_SECRET</code> authenticates <code>/v1/chat/completions</code>.</span></div>
+  <div class="lane"><b>Server only</b><span>Supabase service key, Qdrant key, model keys, ElevenLabs API key.</span></div>
+</div>
+
+<h2>3. Repository map and API</h2>
+<pre>app/
+  main.py                         app setup, middleware, router protection, warm-up
+  core/config.py                  typed .env settings
+  agents/clinic_assistant.py      retrieve → gate → prompt → model → Answer
+  rag/loaders.py                  Markdown/front matter → chunks
+  rag/embeddings.py               local BGE embedding adapter
+  rag/vector_store.py             Qdrant collection/search/filter operations
+  rag/retriever.py                RetrievedChunk and context formatting
+  rag/ingest.py                   idempotent ingestion CLI
+  rag/catalog.py                  rebuild human-readable documents for the UI
+  services/llm.py                 Gemini/DeepSeek construction and fallback
+  services/prompts.py             safety and grounding rules
+  services/voice.py               ElevenLabs REST calls and signed URL
+  services/voice_budget.py        in-memory UTC daily call allowance
+  api/deps.py                     dependency injection, caches and authentication
+  api/turns.py                    shared text/recorded-voice session setup
+  api/routes/llm.py               OpenAI-compatible SSE endpoint for ElevenLabs
+  database/                       Supabase client and repository functions
+web/
+  components/Workspace.tsx        responsive documents/assistant layout
+  components/ChatPanel.tsx        text chat state
+  components/CallPanel.tsx        realtime ElevenLabs call state
+  components/DocumentViewer.tsx   markdown + citation scroll/highlight
+  lib/backend.ts                  server-only FastAPI proxy helper
+  app/api/*/route.ts              Next.js route handlers
+knowledge_base/                   10 fictional clinic Markdown files
+tests/                            82 tests with fake providers and in-memory Qdrant
+deploy/                           systemd, Caddy and runbooks</pre>
+
+<h3>Endpoint summary</h3>
+<table>
+<tr><th>Endpoint</th><th>Purpose</th><th>Authentication</th></tr>
+<tr><td><code>GET /documents</code></td><td>Whole source documents for verification UI</td><td>Public</td></tr>
+<tr><td><code>POST /search</code></td><td>Debug retrieval without the LLM</td><td><code>X-API-Key</code></td></tr>
+<tr><td><code>POST /chat</code></td><td>Persisted text RAG turn with citations</td><td><code>X-API-Key</code></td></tr>
+<tr><td><code>/sessions/*</code></td><td>Create/read/end text sessions</td><td><code>X-API-Key</code></td></tr>
+<tr><td><code>POST /voice/turn</code></td><td>Recorded audio → transcript → RAG → MP3</td><td><code>X-API-Key</code></td></tr>
+<tr><td><code>GET /voice/session</code></td><td>Issue a short-lived signed realtime call URL</td><td><code>X-API-Key</code></td></tr>
+<tr><td><code>POST /v1/chat/completions</code></td><td>ElevenLabs custom LLM, OpenAI SSE format</td><td><code>AGENT_LLM_SECRET</code></td></tr>
+</table>
+
+<h2>4. Technology and direct package reference</h2>
+<h3>Python/backend packages — <span class="path">pyproject.toml</span></h3>
+<table>
+<tr><th>Package</th><th>Why it exists in this project</th></tr>
+<tr><td><b>FastAPI</b></td><td>Typed HTTP routes, Pydantic validation, dependency injection, automatic OpenAPI docs, sync route thread-pool handling.</td></tr>
+<tr><td><b>Uvicorn</b></td><td>ASGI production server. Runs one worker under systemd on <code>127.0.0.1:8000</code>.</td></tr>
+<tr><td><b>Pydantic Settings</b></td><td>Loads and validates environment configuration from <code>.env</code>.</td></tr>
+<tr><td><b>LangChain Core</b></td><td><code>Document</code>, prompts, message types, runnable composition and output parsing.</td></tr>
+<tr><td><b>langchain-text-splitters</b></td><td><code>MarkdownHeaderTextSplitter</code> uses <code>##</code> headings as semantic chunk boundaries.</td></tr>
+<tr><td><b>langchain-qdrant</b></td><td>LangChain <code>Document</code> ↔ Qdrant vector-store adapter.</td></tr>
+<tr><td><b>qdrant-client</b></td><td>Collection creation, payload indexes, deletes, filters and stats.</td></tr>
+<tr><td><b>FastEmbed</b></td><td>Runs <code>BAAI/bge-small-en-v1.5</code> locally; no embedding API charge.</td></tr>
+<tr><td><b>langchain-google-genai</b></td><td>Gemini chat-model adapter.</td></tr>
+<tr><td><b>langchain-openai</b></td><td>Uses <code>ChatOpenAI</code> against DeepSeek’s OpenAI-compatible base URL.</td></tr>
+<tr><td><b>Supabase</b></td><td>Python client for PostgreSQL-backed sessions/messages.</td></tr>
+<tr><td><b>HTTPX</b></td><td>Direct ElevenLabs REST calls; explicit request/response shapes and timeouts.</td></tr>
+<tr><td><b>python-multipart</b></td><td>FastAPI parsing of uploaded audio and form fields.</td></tr>
+<tr><td><b>python-dotenv</b></td><td>Environment-file support used by the configuration stack.</td></tr>
+<tr><td><b>pytest / Ruff</b></td><td>Automated tests; linting and formatting.</td></tr>
+</table>
+
+<h3>Frontend packages — <span class="path">web/package.json</span></h3>
+<table>
+<tr><th>Package</th><th>Role</th></tr>
+<tr><td><b>Next.js</b></td><td>React app plus server route handlers used as a Backend-for-Frontend (BFF).</td></tr>
+<tr><td><b>React</b></td><td>Stateful text/call UI and lifecycle cleanup.</td></tr>
+<tr><td><b>TypeScript</b></td><td>Compile-time contracts for API payloads and component props.</td></tr>
+<tr><td><b>@elevenlabs/react</b></td><td><code>ConversationProvider</code> and <code>useConversation</code> for the realtime agent connection.</td></tr>
+<tr><td><b>react-markdown + remark-gfm</b></td><td>Safe rendering of clinic Markdown, including tables and lists.</td></tr>
+<tr><td><b>Tailwind CSS + typography</b></td><td>Responsive layout and readable Markdown styling.</td></tr>
+</table>
+
+<div class="callout interview"><b>Why LangChain?</b> It earns its place at integration boundaries: documents, splitters, vector-store adapter, prompt templates and provider fallback. Clinic-specific rules—IDs, threshold, grounding gate and metadata—remain plain Python so the important policy is visible.</div>
+
+<h2>5. RAG ingestion: documents to vectors</h2>
+<div class="diagram">
+  <div class="flow">
+    <div class="node"><b>Markdown files</b>front matter + ## sections</div><div class="arrow">→</div>
+    <div class="node"><b>Loader</b>semantic chunks ≤1200 chars</div><div class="arrow">→</div>
+    <div class="node blue"><b>FastEmbed</b>384 floating-point values</div><div class="arrow">→</div>
+    <div class="node amber"><b>Qdrant</b>vector + text + metadata</div>
+  </div>
+</div>
+
+<h3>5.1 Source format</h3>
+<p>Ten fictional Markdown files contain approximately 78 indexed passages. Front matter supplies <code>title</code>, <code>category</code> and <code>last_reviewed</code>. A <code>##</code> heading represents one answerable fact. See <span class="path">knowledge_base/</span>.</p>
+<pre>---
+title: Opening hours and contact
+category: access
+last_reviewed: 2026-11-01
+---
+## Opening hours
+On Tuesdays the surgery offers extended hours and closes at 20:00.</pre>
+
+<h3>5.2 Chunking — <span class="path">app/rag/loaders.py</span></h3>
+<ol>
+  <li>Files are sorted for deterministic behaviour; <code>README.md</code> is excluded.</li>
+  <li>Simple front matter is parsed without a YAML dependency.</li>
+  <li><code>MarkdownHeaderTextSplitter</code> splits on level-two headings.</li>
+  <li>Any unusually long section is split on paragraph boundaries at roughly 1,200 characters.</li>
+  <li>The stored text is prefixed with <code>Document title — Section</code>. The heading therefore contributes meaning to the vector.</li>
+  <li>Metadata travels beside every vector: source, title, section, category, review date and position.</li>
+</ol>
+<div class="callout"><b>Why semantic headings rather than fixed 500-token windows?</b> Each clinic section is already a self-contained answer. Arbitrary windows may split a rule from its exception or mix unrelated facts.</div>
+
+<h3>5.3 Stable IDs and idempotency</h3>
+<p><code>document_id()</code> computes UUIDv5 from <code>source#section#position</code>. Re-running ingestion produces the same IDs. Before inserting one source, all existing points for that source are deleted; this also removes chunks whose headings were deleted. See <span class="path">app/rag/ingest.py</span>.</p>
+
+<h3>5.4 Embeddings — <span class="path">app/rag/embeddings.py</span></h3>
+<p><code>BAAI/bge-small-en-v1.5</code> converts text into a 384-dimensional dense vector. Semantically similar text should point in a similar direction. FastEmbed uses an efficient local runtime; the model is about 50 MB and is downloaded once.</p>
+<p>Qdrant uses cosine similarity:</p>
+<pre>cosine(q, d) = (q · d) / (||q|| × ||d||)
+
+Higher score ⇒ query and document vectors point in a more similar direction.</pre>
+
+<h3>5.5 Qdrant — <span class="path">app/rag/vector_store.py</span></h3>
+<ul>
+  <li>The collection is created with 384 dimensions and cosine distance.</li>
+  <li>A dimension mismatch fails loudly and asks for <code>--rebuild</code>; mixing embedding dimensions is invalid.</li>
+  <li>Keyword payload indexes on <code>metadata.category</code> and <code>metadata.source</code> make filtered operations cheaper.</li>
+  <li>LangChain stores page content and metadata using its standard Qdrant payload shape.</li>
+  <li>Ingestion batches at 64 chunks.</li>
+</ul>
+
+<h2>6. RAG query: question to answer</h2>
+<div class="diagram">
+  <div class="flow">
+    <div class="node"><b>Question</b>“When do you close Tuesday?”</div><div class="arrow">→</div>
+    <div class="node"><b>Embed query</b>384-d vector</div><div class="arrow">→</div>
+    <div class="node amber"><b>Qdrant</b>top 5, score ≥ 0.5</div><div class="arrow">→</div>
+    <div class="node blue"><b>Grounding gate</b>nothing relevant? stop</div><div class="arrow">→</div>
+    <div class="node"><b>LLM</b>prompt + history + context</div>
+  </div>
+</div>
+
+<h3>6.1 Retrieval — <span class="path">app/rag/retriever.py</span></h3>
+<p>The query is embedded with the same model as the documents. Qdrant returns up to <code>RETRIEVAL_TOP_K=5</code> passages whose similarity reaches <code>RETRIEVAL_MIN_SCORE=0.5</code>. Optional category filtering is supported.</p>
+<p><code>RetrievedChunk</code> is a typed application object containing the text, score and citation metadata. <code>format_context()</code> numbers passages before inserting them into the prompt.</p>
+
+<h3>6.2 Grounding gate — <span class="path">app/agents/clinic_assistant.py</span></h3>
+<p>If no passage reaches the threshold, the model is <b>not called</b>. The system returns a fixed “I do not have that information” response and <code>grounded=false</code>. This:</p>
+<ul><li>reduces hallucination risk;</li><li>saves model cost and latency;</li><li>makes the result deterministic;</li><li>signals the UI that no source supported the answer.</li></ul>
+
+<h3>6.3 Generation chain</h3>
+<pre>PROMPT | llm_with_fallbacks | StrOutputParser()</pre>
+<p>The prompt receives three values: retrieved context, the current question and recent conversation history. <code>StrOutputParser</code> extracts plain answer text. The returned <code>Answer</code> also carries source chunks and grounded status.</p>
+
+<h3>6.4 LLM provider strategy — <span class="path">app/services/llm.py</span></h3>
+<p><code>LLM_ORDER</code> controls runtime ordering without a deployment. Missing keys are skipped. The code default is Gemini then DeepSeek; configured providers omitted from the list are appended. LangChain’s <code>with_fallbacks()</code> retries the same chain through the next model if the primary fails.</p>
+<ul>
+  <li>Gemini uses <code>ChatGoogleGenerativeAI</code>.</li>
+  <li>DeepSeek uses <code>ChatOpenAI</code> with <code>base_url=https://api.deepseek.com</code>, because its protocol is OpenAI-compatible.</li>
+  <li>Timeout is 45 seconds and provider clients allow two retries.</li>
+  <li>Temperature is low (0.2) where the model accepts it, favouring factual consistency.</li>
+</ul>
+
+<div class="callout warning"><b>Known ranking weakness:</b> dense retrieval can rank “When the surgery is closed” above “Opening hours” for a closing-time question because wording similarity is not exact factual reasoning. The correct passage remains in top five. The planned fix is hybrid BM25 + dense retrieval fused with Reciprocal Rank Fusion.</div>
+
+<h2>7. Prompting and safety</h2>
+<p>The policy is centralised in <span class="path">app/services/prompts.py</span>, making it reviewable as a business rule rather than hiding it inside route code.</p>
+<table>
+<tr><th>Rule</th><th>Reason</th></tr>
+<tr><td>Emergency symptoms → call 999 immediately</td><td>Safety instruction must outrank normal grounding behaviour.</td></tr>
+<tr><td>Use only supplied clinic context</td><td>Stops invented hours, prices, policies and staff names.</td></tr>
+<tr><td>No diagnosis or medical advice</td><td>The assistant is reception, not a clinician.</td></tr>
+<tr><td>Closed + urgent → NHS 111</td><td>Explicit out-of-hours escalation.</td></tr>
+<tr><td>Two or three plain sentences; no Markdown</td><td>The same answer may be spoken. TTS should not read formatting aloud.</td></tr>
+<tr><td>Ask a clarifying question when unclear</td><td>Better than guessing intent.</td></tr>
+</table>
+
+<div class="callout danger"><b>Honest limitation:</b> prompting and retrieval reduce risk; they do not make an LLM clinically safe. This is a fictional demo, not a medical device. A production healthcare system would require clinical governance, evaluation, audit, privacy controls, incident response and human escalation.</div>
+
+<h2>8. Text chat and persistence</h2>
+<div class="diagram">
+  <div class="lane"><b>1 Browser</b><span><code>POST /api/chat</code> with message and optional session ID.</span></div>
+  <div class="lane"><b>2 Next.js</b><span>Forwards to FastAPI and adds <code>X-API-Key</code>.</span></div>
+  <div class="lane"><b>3 FastAPI</b><span>Resolves/creates session, reads latest 10 messages, stores user message.</span></div>
+  <div class="lane"><b>4 RAG</b><span>Retrieves, grounds and generates.</span></div>
+  <div class="lane"><b>5 Supabase</b><span>Stores assistant message; response includes session ID, citations and count.</span></div>
+</div>
+
+<h3>Shared turn setup — <span class="path">app/api/turns.py</span></h3>
+<p><code>begin_turn()</code> is shared by text chat and recorded voice. It creates a new session or validates an existing one, rejects unknown sessions with 404 and ended sessions with 409, loads the latest 10 messages, then stores the new user message.</p>
+<p>The user message is stored <b>before</b> generation. If the model fails, a reviewer still knows what the user asked. The assistant answer is stored after generation.</p>
+
+<h3>Supabase schema — <span class="path">db/migrations/0001_baseline.sql</span></h3>
+<ul>
+  <li><code>sessions</code>: UUID, active/ended status, timestamps.</li>
+  <li><code>messages</code>: session foreign key, role, content, timestamp.</li>
+  <li><code>appointments</code>: future booking-tool table; currently unused.</li>
+  <li>RLS is enabled with no public policies. Only the backend’s service key bypasses RLS.</li>
+</ul>
+<p>Repository functions in <span class="path">app/database/repositories.py</span> take an explicit client, enabling lightweight fakes in tests. Column lists are explicit to avoid silently exposing future database fields.</p>
+
+<h2>9. Realtime voice: what ElevenLabs does</h2>
+<div class="callout interview"><b>Essential answer:</b> “I did not build a low-level audio server. ElevenLabs Agents owns the realtime speech loop. My browser joins using a short-lived signed URL; ElevenLabs transcribes speech, detects when the user finishes, sends the transcript/history to my OpenAI-compatible RAG endpoint, turns my streamed text into speech, and handles interruptions. My system retains control of knowledge, safety and cost gates.”</div>
+
+<h3>9.1 Full realtime sequence</h3>
+<div class="diagram">
+  <div class="lane"><b>Browser</b><span>Requests microphone first, then calls Next.js <code>/api/voice-session</code>.</span></div>
+  <div class="lane"><b>FastAPI</b><span>Checks daily allowance and asks ElevenLabs for a signed URL using the private API key.</span></div>
+  <div class="lane"><b>Browser</b><span><code>@elevenlabs/react</code> opens a WebSocket using only the signed URL.</span></div>
+  <div class="lane"><b>ElevenLabs</b><span>Streams mic audio → ASR → turn model. It decides the user finished speaking.</span></div>
+  <div class="lane"><b>ElevenLabs</b><span>Sends OpenAI-style messages to <code>POST /v1/chat/completions</code> with a workspace secret.</span></div>
+  <div class="lane"><b>Our API</b><span>Immediately streams “One moment…”; runs Qdrant + LLM; streams the grounded answer and <code>[DONE]</code>.</span></div>
+  <div class="lane"><b>ElevenLabs</b><span>TTS speaks chunks; interruption/barge-in stops or adjusts playback; transcript events return to React.</span></div>
+</div>
+
+<h3>9.2 Signed URLs — <span class="path">app/services/voice.py</span> and <span class="path">app/api/routes/voice_session.py</span></h3>
+<p>The browser must never receive <code>ELEVENLABS_API_KEY</code>. FastAPI calls:</p>
+<pre>GET https://api.elevenlabs.io/v1/convai/conversation/get-signed-url
+    ?agent_id=agent_...
+Header: xi-api-key: [server secret]</pre>
+<p>It returns a short-lived, agent-scoped URL. The route only decrements the budget after ElevenLabs successfully creates it, so failed handshakes do not consume the local allowance.</p>
+
+<h3>9.3 What an ElevenLabs Agent contains</h3>
+<ul>
+  <li><b>ASR:</b> automatic speech recognition converts audio into user transcript.</li>
+  <li><b>Turn model/VAD:</b> voice activity and learned turn-taking decide when to wait, respond or allow interruption.</li>
+  <li><b>LLM:</b> configured as our custom endpoint rather than ElevenLabs’ built-in model.</li>
+  <li><b>TTS:</b> the selected voice/model synthesises our text incrementally.</li>
+  <li><b>Conversation state:</b> ElevenLabs sends prior user/assistant messages on subsequent custom-LLM requests.</li>
+  <li><b>Call history:</b> transcript, timing and errors are visible in the ElevenLabs platform.</li>
+</ul>
+
+<h3>9.4 Custom LLM protocol — <span class="path">app/api/routes/llm.py</span></h3>
+<p>ElevenLabs expects an OpenAI Chat Completions-compatible endpoint at <code>/v1/chat/completions</code> with Server-Sent Events:</p>
+<pre>data: {"object":"chat.completion.chunk",
+       "choices":[{"delta":{"content":"One moment... "},"finish_reason":null}]}
+
+data: {"choices":[{"delta":{"content":"We close at 20:00 on Tuesdays."}}]}
+
+data: {"choices":[{"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]</pre>
+<p>The route extracts the last user message as the current question, converts earlier user/assistant messages to RAG history, ignores ElevenLabs’ system/tool messages, and caps history to ten.</p>
+
+<h3>9.5 Why the buffer phrase exists</h3>
+<p>The RAG chain is currently non-streaming: local query embedding + Qdrant + Gemini typically takes a few seconds. Silence feels broken in a voice call. The sync generator yields a short phrase <i>before</i> calling <code>assistant.answer()</code>, allowing ElevenLabs to begin TTS while the RAG work continues. Once ready, the complete answer is emitted as a second chunk.</p>
+<div class="callout warning"><b>Latency trade-off:</b> a buffer phrase improves perceived latency but can become repetitive. A better future design streams model tokens directly, uses ElevenLabs soft-timeout fillers, caches safe frequent answers, and measures ASR end-of-turn → first audio byte.</div>
+
+<h3>9.6 React call lifecycle — <span class="path">web/components/CallPanel.tsx</span></h3>
+<ul>
+  <li><code>ConversationProvider</code> owns SDK state; <code>useConversation</code> exposes connection status and controls.</li>
+  <li>Microphone permission is requested before a signed URL, preventing a blocked mic from spending a call.</li>
+  <li><code>onMessage</code> maps ElevenLabs <code>user/ai</code> transcript events into the existing <code>TurnList</code>.</li>
+  <li>Status derives from <code>isListening</code>/<code>isSpeaking</code>; mute calls <code>setMuted()</code>.</li>
+  <li>A 90-second browser deadline calls <code>endSession()</code>.</li>
+  <li>Unmount cleanup ends a live session, preventing a hidden paid call and open microphone.</li>
+  <li>The component is dynamically imported in <code>Workspace.tsx</code>, so text-only visitors do not download the voice SDK initially.</li>
+</ul>
+
+<h3>9.7 Cost protection — <span class="path">app/services/voice_budget.py</span></h3>
+<p>A mutex-protected in-memory counter limits signed URLs per UTC day. It is correct for one Uvicorn worker, resets at midnight and also resets on restart. It is intentionally simple for a demo. The UI timer is not a security boundary; the ElevenLabs agent’s max-duration setting is the provider-side backstop.</p>
+<p>For multiple workers/instances, move the counter to Redis or Postgres using an atomic increment with expiry.</p>
+
+<h2>10. Turn-based voice (the earlier implementation)</h2>
+<p><span class="path">app/api/routes/voice.py</span> demonstrates the speech pipeline explicitly:</p>
+<div class="flow diagram">
+  <div class="node"><b>Recorded WebM</b>multipart upload</div><div class="arrow">→</div>
+  <div class="node amber"><b>Scribe v3</b>speech to text</div><div class="arrow">→</div>
+  <div class="node blue"><b>ClinicAssistant</b>same RAG chain</div><div class="arrow">→</div>
+  <div class="node amber"><b>Flash v2.5</b>text to MP3</div>
+</div>
+<ul>
+  <li>Accepts browser audio types and rejects invalid, empty, silent or >20 MB uploads.</li>
+  <li>Calls ElevenLabs directly with HTTPX rather than an SDK so request shapes stay visible.</li>
+  <li>Scribe receives <code>tag_audio_events=false</code>, preventing “(laughter)” from entering prompts.</li>
+  <li>TTS receives <code>apply_text_normalization=on</code> so phone numbers, 999 and times are spoken well.</li>
+  <li>Returns transcript, answer, sources, base64 MP3 and per-stage timing.</li>
+  <li>No barge-in and the caller waits for the whole answer—why the realtime agent replaced it in the UI.</li>
+</ul>
+<div class="callout"><b>Do not confuse model settings:</b> <code>ELEVENLABS_STT_MODEL</code>, <code>ELEVENLABS_TTS_MODEL</code> and <code>ELEVENLABS_VOICE_ID</code> control <code>/voice/turn</code>. Realtime voice/model selection lives in the ElevenLabs Agent configuration.</div>
+
+<h2>11. Frontend and explainability UX</h2>
+<h3>Backend-for-Frontend pattern</h3>
+<p>The browser only calls Next.js <code>/api/*</code>. Server route handlers use <span class="path">web/lib/backend.ts</span> to attach <code>BACKEND_API_KEY</code> and forward to OCI. Benefits:</p>
+<ul><li>the key never enters the JavaScript bundle;</li><li>requests are same-origin, simplifying CORS;</li><li>backend location can change through <code>API_BASE_URL</code> without rebuilding client code patterns.</li></ul>
+
+<h3>Single-screen verification loop</h3>
+<p><span class="path">web/components/Workspace.tsx</span> loads documents and coordinates the active source. Text citations call <code>openSource(source, section)</code>, switch the mobile tab to Documents, and pass a jump target to <code>DocumentViewer</code>. The viewer finds <code>data-section</code>, scrolls smoothly and flashes the source for 2.4 seconds.</p>
+<p><span class="path">app/rag/catalog.py</span> is important: it rebuilds full human-readable sections from the <i>same loader output</i> used for ingestion. The display strips only the artificial title prefix. Thus the demo does not show one document while indexing another.</p>
+
+<h3>Responsive strategy</h3>
+<p>Large screens show navigation, document reader and assistant side by side. Below <code>lg</code>, documents and assistant become tabs. State lives in the parent so clicking a citation can move between panes.</p>
+
+<h2>12. Caching, latency and performance</h2>
+<table>
+<tr><th>Mechanism</th><th>Where</th><th>Why</th></tr>
+<tr><td><code>@lru_cache</code> settings</td><td><code>core/config.py</code></td><td>Parse environment once per process.</td></tr>
+<tr><td>Cached embedder/model</td><td><code>rag/embeddings.py</code></td><td>Load the ~50 MB model once, not per query.</td></tr>
+<tr><td>Disk model cache</td><td><code>FASTEMBED_CACHE_PATH</code></td><td>Avoid downloading weights after every service restart.</td></tr>
+<tr><td>Startup warm-up</td><td><code>main.py</code> lifespan</td><td>Perform one embedding on boot so the first user avoids model-load latency.</td></tr>
+<tr><td>Cached Qdrant/Supabase/voice clients</td><td><code>vector_store.py</code>, <code>database/client.py</code>, <code>api/deps.py</code></td><td>Reuse configured client objects.</td></tr>
+<tr><td>Cached RAG assistant</td><td><code>api/deps.py</code></td><td>Construct prompt/model pipeline once.</td></tr>
+<tr><td>No HTTP data cache</td><td>Next proxy uses <code>cache: no-store</code></td><td>Chat, health and signed URLs must be fresh.</td></tr>
+<tr><td>No answer cache</td><td>Deliberate</td><td>Conversation history and source updates can change answers. Safe FAQ caching is a future optimisation.</td></tr>
+<tr><td>SSE compression excluded</td><td><code>deploy/Caddyfile.native</code></td><td>Compression may buffer a tiny first chunk, defeating the latency-hiding phrase.</td></tr>
+</table>
+
+<h3>Why synchronous FastAPI routes?</h3>
+<p>Supabase, FastEmbed, Qdrant’s used methods, HTTPX calls and LangChain invocation are blocking. Routes such as <code>/chat</code> are declared with normal <code>def</code>, so FastAPI executes them in a thread pool. Writing <code>async def</code> while calling blocking work would freeze the event loop.</p>
+
+<h3>Latency decomposition</h3>
+<pre>Voice turn latency ≈ end-of-turn detection
+                   + query embedding
+                   + Qdrant network search
+                   + LLM time-to-answer
+                   + TTS first-audio latency
+                   + network/playback buffering</pre>
+<p>The observed logs prove where time is spent: signed URL succeeds, ElevenLabs calls our endpoint, Qdrant returns, Gemini generates, then ElevenLabs synthesises. The current largest controllable component is non-streaming LLM generation.</p>
+
+<h2>13. Security model</h2>
+<ul>
+  <li><b>Constant-time comparisons:</b> <code>secrets.compare_digest()</code> reduces timing leakage for API secrets.</li>
+  <li><b>Separate credentials:</b> browser-facing proxy key and ElevenLabs custom-LLM secret have different scopes.</li>
+  <li><b>Signed voice URL:</b> no ElevenLabs master key in the browser.</li>
+  <li><b>Server-only environment variables:</b> Vercel variables are not prefixed <code>NEXT_PUBLIC_</code>.</li>
+  <li><b>RLS:</b> Supabase anonymous clients cannot read data; service role stays backend-only.</li>
+  <li><b>Least exposure:</b> Uvicorn binds localhost; only Caddy accepts internet traffic.</li>
+  <li><b>TLS/security headers:</b> Caddy manages certificates, HSTS, nosniff, referrer policy and removes Server header.</li>
+  <li><b>Input validation:</b> Pydantic request limits plus audio media type/size checks.</li>
+  <li><b>systemd hardening:</b> dedicated user, no new privileges, private temp, read-only home/system except model cache.</li>
+  <li><b>No secret logging:</b> failed agent auth logs header names, never values.</li>
+</ul>
+<div class="callout warning"><b>Production gaps:</b> shared API key is not user authentication; in-memory rate limiting is not distributed; realtime transcripts are held by ElevenLabs; no PII redaction/audit retention policy is implemented. These are acceptable only because this is a fictional demo.</div>
+
+<h2>14. Deployment topology</h2>
+<div class="diagram">
+  <div class="flow">
+    <div class="node blue"><b>Vercel</b>Next.js frontend<br>HTTPS</div><div class="arrow">→</div>
+    <div class="node"><b>DNS</b>api-voice domain</div><div class="arrow">→</div>
+    <div class="node"><b>Caddy</b>ports 80/443<br>TLS</div><div class="arrow">→</div>
+    <div class="node blue"><b>Uvicorn</b>127.0.0.1:8000<br>1 worker</div>
+  </div>
+  <div class="flow" style="margin-top:8px">
+    <div class="node amber"><b>OCI VM</b>Ubuntu 24.04</div>
+    <div class="node amber"><b>systemd</b>restart + hardening</div>
+    <div class="node amber"><b>uv</b>locked Python environment</div>
+  </div>
+</div>
+
+<h3>Why these choices?</h3>
+<ul>
+  <li><b>OCI:</b> inexpensive/free VM with full control and a stable backend hostname.</li>
+  <li><b>No Docker:</b> native <code>uv</code> + systemd reduces layers for a single Python service and was a stated constraint.</li>
+  <li><b>uv:</b> fast deterministic installs from <code>uv.lock</code>.</li>
+  <li><b>systemd:</b> starts at boot, restarts on failure and provides <code>journalctl</code> logs.</li>
+  <li><b>Caddy:</b> automatic certificate issue/renewal and simple reverse proxy configuration.</li>
+  <li><b>One worker:</b> fits memory and keeps the in-memory call budget coherent. Scale-out needs shared rate-limit state.</li>
+  <li><b>Vercel:</b> natural deployment platform for Next.js and server route handlers.</li>
+</ul>
+
+<h3>FastEmbed cache deployment lesson</h3>
+<p><code>PrivateTmp=true</code> gives the service a private temporary directory. FastEmbed’s default cache there would redownload or become inaccessible. The unit explicitly sets <code>FASTEMBED_CACHE_PATH=/home/ubuntu/.cache/fastembed</code>, grants that path through <code>ReadWritePaths</code>, and requires the directory to exist. Missing it causes systemd <code>226/NAMESPACE</code>.</p>
+
+<h2>15. Testing and observability</h2>
+<h3>Testing strategy — <span class="path">tests/</span></h3>
+<p>The suite contains 82 tests and avoids paid/network calls:</p>
+<ul>
+  <li><b>Fake embeddings:</b> deterministic vectors make ranking assertions stable.</li>
+  <li><b>In-memory Qdrant:</b> exercises real collection/filter/search semantics without cloud access.</li>
+  <li><b>Fake Supabase:</b> a minimal query-builder fake records sessions/messages.</li>
+  <li><b>Fake assistant and voice:</b> HTTP tests verify wiring and error handling rather than provider availability.</li>
+  <li><b>HTTPX monkeypatching:</b> pins exact ElevenLabs request shapes and prevents key leakage.</li>
+  <li><b>Contract tests:</b> SSE ordering, authentication, <code>[DONE]</code>, history extraction and fallback speech.</li>
+  <li><b>Behaviour tests:</b> grounding skips the model; history is capped; source deletion is scoped; documents match chunk count.</li>
+</ul>
+<pre>uv run pytest
+uv run ruff check .
+cd web && npm run typecheck && npm run build</pre>
+
+<h3>Operational signals</h3>
+<table>
+<tr><th>Signal</th><th>Interpretation</th></tr>
+<tr><td><code>GET signed-url ... 200</code></td><td>Agent ID and ElevenLabs API key are valid.</td></tr>
+<tr><td><code>POST /v1/chat/completions 200</code></td><td>ElevenLabs reached and authenticated to our custom LLM.</td></tr>
+<tr><td>Qdrant query <code>200</code></td><td>Embedding/search path is operating.</td></tr>
+<tr><td>Gemini/DeepSeek <code>200</code></td><td>Generation succeeded.</td></tr>
+<tr><td><code>agent turn grounded=True sources=[...]</code></td><td>Complete RAG answer produced and traceable to passages.</td></tr>
+<tr><td><code>agent llm auth failed headers=[...]</code></td><td>Workspace secret mismatch/header wiring issue; values are intentionally hidden.</td></tr>
+</table>
+
+<h3>Debugging rule</h3>
+<div class="callout"><b>Separate retrieval from generation.</b> Call <code>/search</code>. If the right passage is missing, fix content/chunking/embeddings/ranking. If it is present but the answer is wrong, inspect prompt/model behaviour. This avoids blindly changing the LLM for a retrieval problem.</div>
+
+<h2>16. Trade-offs, limitations and next improvements</h2>
+<table>
+<tr><th>Current decision</th><th>Benefit</th><th>Limitation / upgrade</th></tr>
+<tr><td>Dense-only retrieval</td><td>Simple, semantic, cheap</td><td>Add BM25 + dense RRF and an evaluation dataset.</td></tr>
+<tr><td>Top 5 + fixed 0.5 threshold</td><td>Transparent grounding gate</td><td>Calibrate on labelled queries; thresholds vary by corpus/model.</td></tr>
+<tr><td>Whole answer emitted after buffer phrase</td><td>Natural complete wording</td><td>Stream model tokens or use provider soft-timeout messages.</td></tr>
+<tr><td>In-memory call budget</td><td>Zero infrastructure, thread-safe</td><td>Redis/Postgres atomic counters for multiple workers.</td></tr>
+<tr><td>Shared API key</td><td>Protects demo quota simply</td><td>User auth, per-IP/user quotas, abuse monitoring.</td></tr>
+<tr><td>Voice history owned by ElevenLabs</td><td>Agent supplies conversational context automatically</td><td>Persist selected call metadata/transcripts under an explicit privacy policy.</td></tr>
+<tr><td>Citations only in text UI</td><td>Voice stays concise</td><td>Return structured source metadata or link the completed call to a cited transcript.</td></tr>
+<tr><td>Appointments table unused</td><td>No unsafe fake booking</td><td>Add a validated <code>book_appointment</code> tool with confirmation and human handoff.</td></tr>
+</table>
+
+<h3>A credible improvement roadmap</h3>
+<ol>
+  <li>Create 50–100 labelled clinic questions with expected sections and answer facts.</li>
+  <li>Measure Recall@K, MRR, grounded-answer accuracy and abstention accuracy.</li>
+  <li>Add BM25 retrieval; fuse dense and lexical ranks with RRF.</li>
+  <li>Rerank top candidates if quality warrants the extra latency.</li>
+  <li>Add end-to-end voice latency telemetry: ASR final → first SSE → first audio.</li>
+  <li>Move budgets to shared storage; add user/IP quotas and monitoring.</li>
+  <li>Add tool calling for appointments only after validation, confirmation and audit design.</li>
+</ol>
+
+<h2>17. Interview questions and strong answers</h2>
+<h3>RAG and data</h3>
+<p><span class="answer">Why RAG instead of fine-tuning?</span><br>Clinic facts change and must be inspectable. RAG updates by editing/re-indexing documents, returns citations, and separates factual knowledge from model behaviour. Fine-tuning is better for style/behaviour than frequently changing factual truth.</p>
+<p><span class="answer">Why Qdrant?</span><br>It provides managed vector search, cosine similarity, metadata payloads/filters and a clean LangChain adapter. It also supports local in-memory testing.</p>
+<p><span class="answer">Why local embeddings?</span><br>No per-query embedding cost or extra external dependency, deterministic dimensions, and a small English corpus fits BGE-small. The trade-off is model memory/startup and weaker ranking than larger models.</p>
+<p><span class="answer">How do you prevent hallucinations?</span><br>Context-only prompt, score threshold, no-context grounding gate that skips the LLM, short factual output, citations and emergency/no-medical-advice rules. I would not claim hallucinations are eliminated.</p>
+<p><span class="answer">Why top five?</span><br>It balances recall and prompt noise for a 78-chunk corpus. The number is configurable and should ultimately be chosen from evaluation results, not intuition.</p>
+<p><span class="answer">What happens when documents change?</span><br>Ingestion deletes all points for that source and re-adds current chunks with stable UUIDv5 IDs. Removed sections disappear. A dimension/model change requires collection rebuild.</p>
+
+<h3>Backend and system design</h3>
+<p><span class="answer">Why FastAPI?</span><br>Typed validation, dependency injection, sync thread-pool handling, automatic OpenAPI and strong Python AI-library support.</p>
+<p><span class="answer">Why Supabase plus Qdrant?</span><br>They solve different data models: relational conversation state and constraints versus high-dimensional nearest-neighbour search. Forcing both into one store would weaken one side; pgvector would be a reasonable simplification at this scale.</p>
+<p><span class="answer">Why sync route functions?</span><br>The current dependencies are blocking. FastAPI runs sync routes in a worker thread; pretending they are async would block the event loop. A future async stack would require async clients end to end.</p>
+<p><span class="answer">How does failover work?</span><br>Provider order is environment-driven, missing keys are skipped, and LangChain <code>with_fallbacks()</code> invokes the next chat model when the primary raises an error.</p>
+
+<h3>Voice</h3>
+<p><span class="answer">What exactly does ElevenLabs do?</span><br>It maintains the realtime WebSocket, ASR, turn-taking/VAD, interruption handling, transcript events and TTS. It calls my API for intelligence through the OpenAI-compatible custom LLM contract.</p>
+<p><span class="answer">Why a signed URL?</span><br>It lets the browser open one short-lived agent session without exposing the account-level ElevenLabs API key.</p>
+<p><span class="answer">What is SSE doing if audio uses WebSockets?</span><br>They are different legs. Browser audio uses a WebSocket to ElevenLabs. ElevenLabs uses HTTP SSE to receive incrementally speakable text from my custom LLM endpoint.</p>
+<p><span class="answer">Why is there latency?</span><br>Turn detection waits for end of speech, then query embedding, remote vector search, non-streaming LLM generation and TTS each add time. The immediate buffer phrase masks part of this; token streaming and measurement are the next improvements.</p>
+<p><span class="answer">How is barge-in implemented?</span><br>ElevenLabs’ turn-taking/audio layer handles it, not the FastAPI code. The React SDK reports listening/speaking state while the agent platform interrupts synthesis when configured.</p>
+<p><span class="answer">What is the difference between the two voice routes?</span><br><code>/voice/turn</code> uploads a complete recording and explicitly performs STT → RAG → TTS. Realtime voice issues a signed agent session; ElevenLabs owns the continuous speech loop and calls <code>/v1/chat/completions</code> for every turn.</p>
+
+<h3>Security, scaling and operations</h3>
+<p><span class="answer">How are secrets protected?</span><br>Browser requests go through Next.js server routes; provider and database keys stay server-side. Realtime uses a signed URL. The custom LLM has a separate secret, compared in constant time.</p>
+<p><span class="answer">What breaks if you add more Uvicorn workers?</span><br>Each worker gets its own in-memory call counter and cached model/client objects, increasing memory and making quotas inconsistent. I would move quota state to Redis/Postgres before scaling horizontally.</p>
+<p><span class="answer">How would you make it production healthcare-ready?</span><br>Do not start with model changes: add governance, DPIA/consent, data minimisation, retention/deletion, encryption/key rotation, user auth/RBAC, audit trails, clinical safety review, evaluations, human escalation, incident response, SLAs and provider agreements.</p>
+
+<h2>18. Final revision cheat sheet</h2>
+<div class="two">
+  <div class="card"><h4>Core numbers</h4><ul><li>10 Markdown files</li><li>~78 chunks</li><li>1,200 char long-section guard</li><li>BGE-small: 384 dimensions</li><li>Top K: 5</li><li>Minimum score: 0.5</li><li>History cap: 10 messages</li><li>Call UI cap: 90 seconds</li></ul></div>
+  <div class="card"><h4>Core file path</h4><p class="small"><code>loaders.py</code> → <code>embeddings.py</code> → <code>vector_store.py</code> → <code>retriever.py</code> → <code>clinic_assistant.py</code> → route.</p></div>
+  <div class="card"><h4>Text flow</h4><p class="small">Browser → Next BFF → FastAPI → Supabase history → Qdrant → Gemini/DeepSeek → citations → Supabase.</p></div>
+  <div class="card"><h4>Voice flow</h4><p class="small">Browser mic ↔ ElevenLabs WebSocket → ASR/turn model → our SSE custom LLM → RAG → ElevenLabs TTS.</p></div>
+</div>
+
+<h3>Five design decisions to defend</h3>
+<ol>
+  <li>Semantic heading chunks preserve complete clinic rules.</li>
+  <li>A relevance gate abstains and skips the LLM when retrieval is weak.</li>
+  <li>One RAG brain serves text and both voice modes.</li>
+  <li>ElevenLabs owns realtime speech complexity; our server owns truth and safety.</li>
+  <li>The Next.js BFF and signed URLs keep master credentials out of the browser.</li>
+</ol>
+
+<h3>Study plan</h3>
+<ol>
+  <li><b>Pass 1:</b> read sections 1, 2, 5, 6 and 9.</li>
+  <li><b>Pass 2:</b> open every bold file path and locate the described function.</li>
+  <li><b>Pass 3:</b> draw the text and voice sequence from memory.</li>
+  <li><b>Pass 4:</b> answer all interview questions aloud in under 60 seconds each.</li>
+  <li><b>Pass 5:</b> practise admitting trade-offs: “For a demo I chose X; at scale I would change Y because Z.”</li>
+</ol>
+
+<div class="callout interview"><b>The confidence test:</b> you understand the project when you can start at a user’s spoken waveform, name every network hop and data transformation until audio returns, then explain which secrets cross which boundary, where latency enters, what is cached, and what you would change for ten instances or real patient data.</div>
+
+<p class="footer-note">Generated from the repository’s implemented code paths. Always prefer the code over screenshots or dashboard labels, because hosted provider interfaces change.</p>
+</body>
+</html>
