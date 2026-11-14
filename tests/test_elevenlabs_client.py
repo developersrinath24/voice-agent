@@ -9,6 +9,7 @@ opening times get read out digit by digit.
 import httpx
 import pytest
 
+from app.core.config import settings
 from app.services.voice import ElevenLabsClient, VoiceError
 
 
@@ -58,7 +59,7 @@ def test_synthesize_asks_for_number_normalisation(monkeypatch, client):
 
     call = recorder.calls[0]
     assert "/v1/text-to-speech/" in call["url"]
-    assert call["url"].endswith("/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM")
+    assert call["url"].endswith(f"/v1/text-to-speech/{settings.ELEVENLABS_VOICE_ID}")
     assert call["options"]["json"]["apply_text_normalization"] == "on"
     assert call["options"]["json"]["text"] == "Ring 01234 567890"
     assert call["options"]["params"]["output_format"] == "mp3_44100_128"

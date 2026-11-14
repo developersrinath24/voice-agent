@@ -39,8 +39,11 @@ class Settings(BaseSettings):
     # model; eleven_v4_turbo is more expressive at a higher price.
     ELEVENLABS_STT_MODEL: str = "scribe_v3"
     ELEVENLABS_TTS_MODEL: str = "eleven_flash_v2_5"
-    # "Rachel" — a neutral read. Swap for any voice id from your dashboard.
-    ELEVENLABS_VOICE_ID: str = "21m00Tcm4TlvDq8ikWAM"
+    # Bella — a calm premade voice, suited to a receptionist. Premade voices work
+    # on the free tier; most of the voice library (Rachel included) is paid-only
+    # through the API and returns 402 on a free key. Any voice on your account
+    # works here — copy the id from the ElevenLabs dashboard.
+    ELEVENLABS_VOICE_ID: str = "EXAVITQu4vr4xnSDxMaL"
     # Stay under the 25 MB request body limit set in the Caddy configs.
     VOICE_MAX_UPLOAD_BYTES: int = 20 * 1024 * 1024
 

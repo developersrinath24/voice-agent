@@ -175,6 +175,12 @@ as `(laughter)`), and Flash v2.5 is asked for `apply_text_normalization=on`
 (because it is off by default for speed, and a clinic answer is mostly numbers —
 phone numbers, opening times, 999).
 
+**Free keys can only use premade voices.** Most of the voice library, Rachel
+included, returns `402 paid_plan_required` through the API. The default here is
+Bella (`EXAVITQu4vr4xnSDxMaL`), a premade voice. A key scoped to text-to-speech
+and speech-to-text only also cannot call `/v1/voices` — that is fine, it just
+means the voice id has to come from the dashboard.
+
 ## Deployment
 
 Two supported paths to an Oracle Cloud VM. Both put Caddy in front for HTTPS and
