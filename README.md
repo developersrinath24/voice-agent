@@ -104,9 +104,24 @@ app/
   services/             (empty) LLM clients, prompt assembly
   agents/               (empty) conversation orchestration
 db/migrations/          SQL migrations to run in Supabase
-knowledge_base/         Source clinic documents to ingest
+knowledge_base/         Source clinic documents to ingest (fictional practice)
 tests/                  Pytest suite (Supabase faked in memory, no network)
 ```
+
+## Knowledge base
+
+`knowledge_base/` contains ten markdown documents describing **Bramble Court
+Surgery**, a fictional NHS GP practice: opening hours, appointments, services,
+prescriptions, out-of-hours care, registration, fees, staff, test results and
+policies. Roughly 3,700 words across 71 headed sections.
+
+It is deliberately realistic in shape — front matter with `title`, `category`
+and `last_reviewed`, one topic per file, and a `##` heading per self-contained
+fact. Those headings become the chunk boundaries, so the retrieval unit is a
+whole answer rather than an arbitrary slice of text.
+
+If you change the documents, re-run ingestion; chunk IDs are deterministic, so
+edits replace existing vectors instead of duplicating them.
 
 ## Tests
 
