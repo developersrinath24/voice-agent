@@ -19,8 +19,9 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 # Bake the embedding model into the image (~50 MB). The first real request is
 # then not a download, and the container works with outbound traffic restricted.
+# --no-dev matters here: without it `uv run` would sync the dev group back in.
 RUN mkdir -p "$FASTEMBED_CACHE_PATH" \
-    && uv run python -c "from fastembed import TextEmbedding; TextEmbedding('BAAI/bge-small-en-v1.5')" \
+    && uv run --frozen --no-dev python -c "from fastembed import TextEmbedding; TextEmbedding('BAAI/bge-small-en-v1.5')" \
     && chmod -R a+rX "$FASTEMBED_CACHE_PATH"
 
 COPY app ./app
