@@ -184,6 +184,8 @@ use (~50 MB) into `FASTEMBED_CACHE_PATH`. Re-run this after editing anything in
 
 ```bash
 sudo cp deploy/gp-voice-agent.service /etc/systemd/system/
+# If you uploaded the files from Windows rather than cloning, strip CRLF:
+sudo sed -i 's/\r$//' /etc/systemd/system/gp-voice-agent.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now gp-voice-agent
 systemctl status gp-voice-agent --no-pager

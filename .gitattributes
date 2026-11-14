@@ -1,0 +1,12 @@
+# Keep line endings sane across Windows and Linux.
+#
+# The systemd unit and shell scripts are executed by Linux. If they arrive with
+# CRLF endings, systemd reports "Unknown key name" or "Invalid section header"
+# and the service refuses to start. Pin those to LF regardless of platform.
+* text=auto
+
+*.service text eol=lf
+*.sh      text eol=lf
+Dockerfile text eol=lf
+Caddyfile* text eol=lf
+uv.lock   text eol=lf
