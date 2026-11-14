@@ -12,7 +12,27 @@ def test_root(client):
 def test_health_lists_integration_flags(client):
     body = client.get("/health").json()
     assert body["status"] == "ok"
-    assert set(body["configured"]) == {"supabase", "qdrant", "deepseek", "gemini", "elevenlabs"}
+    assert set(body["configured"]) == {
+        "supabase",
+        "qdrant",
+        "deepseek",
+        "gemini",
+        "elevenlabs",
+        "agent",
+    }
+
+
+def test_health_reports_whether_a_call_can_be_placed(client, monkeypatch):
+    monkeypatch.setattr(settings, "ELEVENLABS_AGENT_ID", "")
+    monkeypatch.setattr(settings, "AGENT_LLM_SECRET", "")
+    assert client.get("/health").json()["configured"]["agent"] is False
+
+    # Both halves are required: an agent without the secret would take calls it
+    # could not answer.
+    monkeypatch.setattr(settings, "ELEVENLABS_AGENT_ID", "agent_x")
+    assert client.get("/health").json()["configured"]["agent"] is False
+    monkeypatch.setattr(settings, "AGENT_LLM_SECRET", "s3cret")
+    assert client.get("/health").json()["configured"]["agent"] is True
 
 
 def test_chat_starts_a_session_and_stores_both_turns(client, fake_supabase, fake_assistant):

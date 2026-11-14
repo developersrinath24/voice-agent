@@ -21,9 +21,9 @@ page costs no ElevenLabs credits.
 | 2 | Knowledge base ingestion + Qdrant retrieval (LangChain) | Done |
 | 3 | RAG answer chain, DeepSeek primary / Gemini fallback | Done |
 | 4 | Retrieval and answer quality evaluation | Next |
-| 5 | Speech-to-text / text-to-speech (ElevenLabs) | Turn-based `/voice/turn` done; realtime agent paused |
-| 6 | Next.js demo client: documents + chat on one screen | Done locally |
-| 7 | Deployment: native Python on OCI, Vercel for the web app | Runbook ready, not yet deployed |
+| 5 | Speech-to-text / text-to-speech (ElevenLabs) | Done: turn-based `/voice/turn` and realtime agent calls |
+| 6 | Next.js demo client: documents + chat on one screen | Done; text chat and live call |
+| 7 | Deployment: native Python on OCI, Vercel for the web app | Live: API on OCI, demo on Vercel |
 
 `POST /chat` runs the full pipeline: retrieve relevant clinic passages, answer
 from them, return citations, and persist both turns. It returns `503` until a
@@ -35,7 +35,7 @@ on its own.
 ```
 Browser
       |
-      |  chat + knowledge base
+      |  chat + knowledge base + live call
       v
 Next.js client  --------------------+
       |                             |
@@ -44,11 +44,13 @@ Next.js client  --------------------+
 FastAPI backend  <->  Supabase (sessions, messages)
       |
       +--> LangChain chain
-             |
-             +--> Qdrant Cloud (knowledge base vectors, 384-dim cosine)
-             +--> DeepSeek (primary LLM) -> Gemini (fallback)
+      |      |
+      |      +--> Qdrant Cloud (knowledge base vectors, 384-dim cosine)
+      |      +--> DeepSeek (primary LLM) -> Gemini (fallback)
       |
-      +--> ElevenLabs (STT + TTS, unused by the demo)
+      +--> ElevenLabs Agents  <--- microphone audio (WebRTC/WebSocket)
+             |
+             +--> custom LLM: POST /v1/chat/completions (this API, same chain)
 ```
 
 ## How an answer is produced
@@ -108,7 +110,9 @@ Open http://127.0.0.1:8000/docs for the interactive API docs.
 ### Environment variables
 
 See `.env.example`. You need Supabase, Qdrant, and at least one of
-`DEEPSEEK_API_KEY` / `GEMINI_API_KEY`.
+`DEEPSEEK_API_KEY` / `GEMINI_API_KEY`. Realtime calls additionally need
+`ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID` and `AGENT_LLM_SECRET`; without them
+the Call button returns a clear 503 and text chat is unaffected.
 
 **Use the Supabase `service_role` key, not the `anon` key.** Row level security
 is enabled on all tables with no policies, so the anon key can read nothing. The
@@ -145,7 +149,9 @@ uv run python -m app.database.test_connection
 | `GET` | `/sessions/{id}/messages` | Full ordered transcript |
 | `POST` | `/sessions/{id}/end` | Mark a session as ended |
 | `POST` | `/search` | Retrieval only: ranked chunks with scores and sources |
+| `GET` | `/voice/session` | Signed URL + call cap for one realtime call |
 | `POST` | `/voice/turn` | Audio in, spoken answer out (ElevenLabs Scribe + Flash TTS) |
+| `POST` | `/v1/chat/completions` | OpenAI-compatible SSE used by the ElevenLabs agent (agent secret, not `X-API-Key`) |
 
 `/chat` returns `grounded` and a `sources` array, so a client can show *why* an
 answer was given and flag ungrounded replies for review.
@@ -159,10 +165,36 @@ serve.
 
 ### Voice
 
-`POST /voice/turn` takes one recorded question and returns the transcript, the
-grounded answer, its sources, and the answer as base64 MP3 — the same shape as
-`/chat` plus audio, so a client can show what was heard and where the answer came
-from.
+There are two paths, and they answer from the same chain.
+
+**Live call (the demo's Voice tab).** `GET /voice/session` returns a signed URL
+from ElevenLabs plus the call cap and the number of calls left today. The browser
+hands the URL to `@elevenlabs/react` and the agent handles the audio: turn
+detection, barge-in, speech synthesis. Its brain is the same `ClinicAssistant`,
+reached through `POST /v1/chat/completions` — the OpenAI-compatible endpoint
+ElevenLabs' "custom LLM" feature expects. That endpoint is authenticated with
+`AGENT_LLM_SECRET`, never the browser-facing API key.
+
+The stream starts with a buffer phrase before retrieval runs. The chain takes a
+couple of seconds, and on a phone that silence reads as a dropped line. The
+answer follows in one chunk, because the chain does not stream tokens and
+speaking half a thought is worse than a short pause.
+
+Costs are capped three ways: the UI hangs up at `VOICE_MAX_CALL_SECONDS` (90),
+`/voice/session` returns `429` after `VOICE_DAILY_CALL_LIMIT` calls per UTC day,
+and the agent has its own max duration as a backstop. A call is only counted
+after ElevenLabs issues a URL, so a failed handshake is free. The counter lives
+in process memory; a restart resets it, which errs towards "the demo works"
+rather than "the account is drained".
+
+Creating the agent is a one-time dashboard step. The full walkthrough, including
+the custom-LLM fields and troubleshooting table, is in
+[`deploy/AGENT.md`](deploy/AGENT.md).
+
+**Turn-based.** `POST /voice/turn` takes one recorded question and returns the
+transcript, the grounded answer, its sources, and the answer as base64 MP3 — the
+same shape as `/chat` plus audio, so a client can show what was heard and where
+the answer came from.
 
 ```bash
 curl -X POST http://127.0.0.1:8000/voice/turn \
@@ -172,10 +204,10 @@ curl -X POST http://127.0.0.1:8000/voice/turn \
 ```
 
 It is deliberately turn-based: no barge-in, and the caller waits for the whole
-answer before hearing any of it. That is the honest v1 — it makes the seam
-between speech and knowledge visible before a realtime agent takes over the audio
-plumbing. `timings_ms` in the response reports where the time went, which is the
-number that matters when judging whether it feels like a conversation.
+answer before hearing any of it. It stays in the API because it is the cheapest
+way to test the speech seam, and because it shows the same retrieval and
+grounding without an agent in the middle. `timings_ms` in the response reports
+where the time went.
 
 Two provider details are pinned in tests because they are easy to lose: Scribe is
 asked for `tag_audio_events=false` (otherwise laughter and coughs arrive inline
@@ -195,6 +227,10 @@ means the voice id has to come from the dashboard.
 `knowledge_base/` rendered as it was written; on the right, the assistant. Each
 answer carries citations, and clicking one scrolls the reading pane to that
 section and highlights it — the answer and its evidence on one screen.
+
+Text chat is the default, so simply reading the page spends nothing. **Call**
+switches the assistant panel to a live conversation; the ElevenLabs SDK is
+loaded only then, behind `next/dynamic`, so the initial bundle does not carry it.
 
 ```bash
 cd web
@@ -230,6 +266,9 @@ For the concrete run — `api-voice.horizonwebcraft.com` on the VM, the demo on
 Vercel, DNS first, exact environment variables:
 [`deploy/QUICKSTART.md`](deploy/QUICKSTART.md).
 
+Setting up the voice agent (dashboard fields, custom-LLM URL, secret, caps):
+[`deploy/AGENT.md`](deploy/AGENT.md).
+
 **Docker:**
 
 ```bash
@@ -254,7 +293,7 @@ app/
   core/config.py        Settings loaded from .env
   api/deps.py           Shared dependencies (Supabase, assistant, voice, 503 handling)
   api/turns.py          Session resolution + history + user turn, shared by chat and voice
-  api/routes/           health, documents, chat, sessions, search, voice
+  api/routes/           health, documents, chat, sessions, search, voice, voice_session, llm
   database/client.py    Lazy Supabase client
   database/repositories.py  All queries for sessions and messages
   schemas/              Pydantic request/response models
@@ -267,7 +306,8 @@ app/
     ingest.py           CLI for indexing the knowledge base
   services/
     llm.py              DeepSeek primary, Gemini fallback (with_fallbacks)
-    voice.py            ElevenLabs speech-to-text and text-to-speech
+    voice.py            ElevenLabs speech-to-text, text-to-speech, signed URLs
+    voice_budget.py     Daily cap on realtime calls
     prompts.py          System prompt and the not-found answer
   agents/
     clinic_assistant.py Retrieve -> ground -> answer chain

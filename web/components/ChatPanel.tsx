@@ -17,9 +17,10 @@ type Backend = "checking" | "online" | "offline";
 
 type Props = {
   onOpenSource: (source: string, section: string) => void;
+  onCall: () => void;
 };
 
-export default function ChatPanel({ onOpenSource }: Props) {
+export default function ChatPanel({ onOpenSource, onCall }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +104,21 @@ export default function ChatPanel({ onOpenSource }: Props) {
           <p className="text-[11px] text-slate-500">Answers only from the practice information</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onCall}
+            title="Talk to the practice instead of typing"
+            className="flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-1 text-[11px] font-medium text-teal-800 ring-1 ring-teal-200 transition hover:bg-teal-100"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+              className="h-3 w-3 fill-current"
+            >
+              <path d="M3.6 2.2c.5-.5 1.3-.4 1.8.1l1.9 2.1c.4.5.4 1.2 0 1.7L6.1 7.4a11 11 0 0 0 6.5 6.5l1.3-1.2c.5-.4 1.2-.4 1.7 0l2.1 1.9c.5.5.6 1.3.1 1.8l-1 1c-.6.6-1.5.8-2.3.6C8.3 16.7 3.3 11.7 1.9 5.5c-.2-.8 0-1.7.6-2.3l1.1-1Z" />
+            </svg>
+            Call
+          </button>
           {turns.length > 0 && (
             <button
               type="button"

@@ -25,6 +25,13 @@ export type ClinicSection = {
   content: string;
 };
 
+/** Shape returned by GET /voice/session: what the browser needs to place a call. */
+export type VoiceSession = {
+  signed_url: string;
+  max_seconds: number;
+  remaining_calls: number;
+};
+
 /** Shape returned by GET /documents: one knowledge base file. */
 export type ClinicDocument = {
   source: string;

@@ -23,5 +23,8 @@ async def health() -> dict:
             "deepseek": bool(settings.DEEPSEEK_API_KEY),
             "gemini": bool(settings.GEMINI_API_KEY),
             "elevenlabs": bool(settings.ELEVENLABS_API_KEY),
+            # True only when a call can actually be placed: an agent id and the
+            # shared secret the agent uses to reach /v1/chat/completions.
+            "agent": bool(settings.ELEVENLABS_AGENT_ID and settings.AGENT_LLM_SECRET),
         },
     }

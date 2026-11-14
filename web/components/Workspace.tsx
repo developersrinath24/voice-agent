@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 
 import ChatPanel from "@/components/ChatPanel";
 import DocumentNav from "@/components/DocumentNav";
@@ -8,7 +9,20 @@ import DocumentViewer from "@/components/DocumentViewer";
 import { detailOf } from "@/lib/http";
 import type { ClinicDocument } from "@/lib/types";
 
+// The ElevenLabs SDK touches browser audio APIs, so it is loaded only when the
+// visitor asks for a call, never during the initial page render. Text chat —
+// the default — does not pay for it at all.
+const CallPanel = dynamic(() => import("@/components/CallPanel"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-0 flex-1 items-center justify-center rounded-2xl bg-white p-6 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+      Preparing the call…
+    </div>
+  ),
+});
+
 type Tab = "documents" | "assistant";
+type Mode = "chat" | "call";
 
 /** A request to scroll to one section. `nonce` lets the same section re-trigger. */
 type Jump = { section: string; nonce: number };
@@ -20,6 +34,7 @@ export default function Workspace() {
   const [selected, setSelected] = useState<string | null>(null);
   const [jump, setJump] = useState<Jump | null>(null);
   const [tab, setTab] = useState<Tab>("assistant");
+  const [mode, setMode] = useState<Mode>("chat");
 
   const loadDocuments = useCallback(async () => {
     setLoading(true);
@@ -133,7 +148,11 @@ export default function Workspace() {
         <section
           className={`${tab === "assistant" ? "flex" : "hidden"} min-h-0 flex-1 flex-col lg:flex lg:w-[420px] lg:shrink-0`}
         >
-          <ChatPanel onOpenSource={openSource} />
+          {mode === "chat" ? (
+            <ChatPanel onOpenSource={openSource} onCall={() => setMode("call")} />
+          ) : (
+            <CallPanel onOpenSource={openSource} onBackToChat={() => setMode("chat")} />
+          )}
         </section>
       </div>
     </>

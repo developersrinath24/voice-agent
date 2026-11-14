@@ -146,9 +146,17 @@ DEEPSEEK_API_KEY=
 RETRIEVAL_TOP_K=5
 RETRIEVAL_MIN_SCORE=0.5
 
-# Deliberately empty: the demo is text-only so it spends no ElevenLabs credits.
+# Optional: only needed for the voice features. Empty = text-only, no credits.
 ELEVENLABS_API_KEY=
+# Realtime calls (optional). See deploy/AGENT.md for the dashboard steps.
+ELEVENLABS_AGENT_ID=
+AGENT_LLM_SECRET=
+VOICE_MAX_CALL_SECONDS=90
+VOICE_DAILY_CALL_LIMIT=10
 ```
+
+The voice variables can be added later; the API and the text demo start without
+them. After changing them: `sudo systemctl restart gp-voice-agent`.
 
 `DOMAIN` is only read by the Docker compose path; leave it out here.
 

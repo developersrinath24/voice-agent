@@ -10,9 +10,10 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient, models
 
 from app.agents.clinic_assistant import Answer
-from app.api.deps import clinic_assistant, supabase_client, voice_client
+from app.api.deps import call_budget, clinic_assistant, supabase_client, voice_client
 from app.core.config import settings
 from app.main import app
+from app.services.voice_budget import CallBudget
 
 EMBEDDING_DIM = 8
 
@@ -104,6 +105,8 @@ class FakeVoice:
         self.audio = b"ID3-fake-mp3-bytes"
         self.transcribed: list[tuple[int, str]] = []
         self.spoken: list[str] = []
+        self.signed_for: list[str] = []
+        self.signed_url_error: Exception | None = None
 
     def transcribe(self, audio: bytes, filename: str, content_type: str) -> str:
         self.transcribed.append((len(audio), content_type))
@@ -112,6 +115,12 @@ class FakeVoice:
     def synthesize(self, text: str) -> bytes:
         self.spoken.append(text)
         return self.audio
+
+    def signed_url(self, agent_id: str) -> str:
+        if self.signed_url_error is not None:
+            raise self.signed_url_error
+        self.signed_for.append(agent_id)
+        return "wss://api.elevenlabs.io/v1/convai/conversation?agent_id=fake&token=fake"
 
 
 @pytest.fixture
@@ -211,14 +220,22 @@ def fake_supabase() -> FakeSupabase:
 
 
 @pytest.fixture
+def fake_budget() -> CallBudget:
+    """A fresh allowance per test, so counters never leak between tests."""
+    return CallBudget(settings.VOICE_DAILY_CALL_LIMIT)
+
+
+@pytest.fixture
 def client(
     fake_supabase: FakeSupabase,
     fake_assistant: FakeAssistant,
     fake_voice: FakeVoice,
+    fake_budget: CallBudget,
 ):
     app.dependency_overrides[supabase_client] = lambda: fake_supabase
     app.dependency_overrides[clinic_assistant] = lambda: fake_assistant
     app.dependency_overrides[voice_client] = lambda: fake_voice
+    app.dependency_overrides[call_budget] = lambda: fake_budget
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

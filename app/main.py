@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.deps import require_api_key
-from app.api.routes import chat, documents, health, search, sessions, voice
+from app.api.routes import chat, documents, health, llm, search, sessions, voice, voice_session
 from app.core.config import settings
 from app.rag.embeddings import get_embedder
 
@@ -65,6 +65,11 @@ app.include_router(chat.router, tags=["Chat"], dependencies=protected)
 app.include_router(sessions.router, tags=["Sessions"], dependencies=protected)
 app.include_router(search.router, tags=["Search"], dependencies=protected)
 app.include_router(voice.router, tags=["Voice"], dependencies=protected)
+app.include_router(voice_session.router, tags=["Voice"], dependencies=protected)
+
+# The realtime agent's custom LLM. Not behind API_KEY: ElevenLabs authenticates
+# with AGENT_LLM_SECRET instead, and the two secrets should not be the same one.
+app.include_router(llm.router, tags=["Agents"])
 
 
 @app.get("/", tags=["Health"])

@@ -1,8 +1,9 @@
+import logging
 import secrets
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from supabase import Client
 
 from app.agents.clinic_assistant import ClinicAssistant
@@ -10,6 +11,9 @@ from app.core.config import settings
 from app.database.client import get_supabase
 from app.services.llm import LLMNotConfigured, get_llm
 from app.services.voice import ElevenLabsClient, VoiceNotConfigured
+from app.services.voice_budget import CallBudget
+
+logger = logging.getLogger(__name__)
 
 
 def require_api_key(x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None) -> None:
@@ -63,7 +67,51 @@ def voice_client() -> ElevenLabsClient:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@lru_cache
+def get_call_budget() -> CallBudget:
+    return CallBudget(settings.VOICE_DAILY_CALL_LIMIT)
+
+
+def call_budget() -> CallBudget:
+    """FastAPI dependency: today's allowance of realtime calls."""
+    return get_call_budget()
+
+
+def require_agent_secret(
+    request: Request,
+    authorization: Annotated[str | None, Header()] = None,
+    xi_api_key: Annotated[str | None, Header(alias="xi-api-key")] = None,
+    x_api_key: Annotated[str | None, Header(alias="x-api-key")] = None,
+) -> None:
+    """Gate the custom-LLM endpoint that ElevenLabs calls.
+
+    ElevenLabs lets you attach a secret to the custom LLM, but the header it
+    arrives in is not part of the public contract, so the three plausible ones
+    are accepted. On mismatch the header *names* are logged — never the values —
+    which is enough to diagnose a wiring mistake from the journal.
+    """
+    expected = settings.AGENT_LLM_SECRET
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail="AGENT_LLM_SECRET is not set; the agent LLM endpoint is disabled",
+        )
+
+    bearer = ""
+    if authorization and authorization.lower().startswith("bearer "):
+        bearer = authorization[7:].strip()
+
+    for candidate in (bearer, xi_api_key, x_api_key):
+        if candidate and secrets.compare_digest(candidate, expected):
+            return
+
+    logger.warning("agent llm auth failed headers=%s", sorted(request.headers.keys()))
+    raise HTTPException(status_code=401, detail="Invalid agent secret")
+
+
 # Use in route signatures as:  client: SupabaseClient
 SupabaseClient = Annotated[Client, Depends(supabase_client)]
 Assistant = Annotated[ClinicAssistant, Depends(clinic_assistant)]
 Voice = Annotated[ElevenLabsClient, Depends(voice_client)]
+CallBudgetDep = Annotated[CallBudget, Depends(call_budget)]
+AgentSecret = Annotated[None, Depends(require_agent_secret)]

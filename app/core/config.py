@@ -34,7 +34,17 @@ class Settings(BaseSettings):
 
     # Voice (ElevenLabs)
     ELEVENLABS_API_KEY: str = ""
+    # Agent created in the ElevenLabs dashboard for realtime calls. Its custom
+    # LLM points at POST /v1/chat/completions on this API.
     ELEVENLABS_AGENT_ID: str = ""
+    # Shared secret ElevenLabs sends on every custom-LLM request. Deliberately
+    # separate from API_KEY: ElevenLabs must know this one, and it opens only
+    # the agent endpoint, not /chat or /search.
+    AGENT_LLM_SECRET: str = ""
+    # A call spends credits for as long as it is open and the demo is public,
+    # so both the length and the daily number are capped in the backend.
+    VOICE_MAX_CALL_SECONDS: int = 90
+    VOICE_DAILY_CALL_LIMIT: int = 10
     # Scribe v3 does recorded speech-to-text. Flash v2.5 is the low-latency TTS
     # model; eleven_v4_turbo is more expressive at a higher price.
     ELEVENLABS_STT_MODEL: str = "scribe_v3"

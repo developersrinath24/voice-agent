@@ -3,6 +3,8 @@ import type { Turn } from "@/lib/types";
 type Props = {
   turns: Turn[];
   onOpenSource: (source: string, section: string) => void;
+  /** "Assistant" in text chat, "Reception" during a call. */
+  assistantLabel?: string;
 };
 
 function Sources({ turn, onOpenSource }: { turn: Turn; onOpenSource: Props["onOpenSource"] }) {
@@ -27,7 +29,7 @@ function Sources({ turn, onOpenSource }: { turn: Turn; onOpenSource: Props["onOp
   );
 }
 
-export default function TurnList({ turns, onOpenSource }: Props) {
+export default function TurnList({ turns, onOpenSource, assistantLabel = "Assistant" }: Props) {
   return (
     <ol className="flex flex-col gap-5 px-4 py-5 sm:px-5">
       {turns.map((turn) => {
@@ -35,7 +37,7 @@ export default function TurnList({ turns, onOpenSource }: Props) {
         return (
           <li key={turn.id} className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
             <span className="px-1 text-[11px] font-medium uppercase tracking-wide text-slate-400">
-              {isUser ? "You" : "Assistant"}
+              {isUser ? "You" : assistantLabel}
             </span>
 
             <div

@@ -6,7 +6,13 @@
 #
 # The app listens on 127.0.0.1:8000, so only Caddy on this machine can reach it.
 {$DOMAIN} {
-	encode zstd gzip
+	# The agent's custom-LLM stream must not be compressed: a compressor buffers
+	# until it has enough bytes, which would sit on "One moment, let me check…"
+	# and make the agent sound slow. Everything else is still compressed.
+	@compressible {
+		not path /v1/chat/completions
+	}
+	encode @compressible zstd gzip
 
 	request_body {
 		max_size 25MB

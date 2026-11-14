@@ -1,7 +1,13 @@
 # Caddy obtains and renews a Let's Encrypt certificate automatically once the
 # domain resolves to this machine and ports 80/443 are reachable.
 {$DOMAIN} {
-	encode zstd gzip
+	# The agent's custom-LLM stream must not be compressed: a compressor buffers
+	# until it has enough bytes, which would sit on the buffer phrase and make
+	# the agent sound slow.
+	@compressible {
+		not path /v1/chat/completions
+	}
+	encode @compressible zstd gzip
 
 	# Voice uploads will grow past the default; cap them anyway so a stray client
 	# cannot exhaust memory or bandwidth.

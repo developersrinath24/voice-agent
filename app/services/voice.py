@@ -50,6 +50,37 @@ class ElevenLabsClient:
             raise VoiceError(f"ElevenLabs returned {response.status_code}: {response.text[:200]}")
         return response
 
+    def _get(self, path: str, **kwargs) -> httpx.Response:
+        try:
+            response = httpx.get(
+                f"{self._base_url}{path}",
+                headers={"xi-api-key": self._api_key},
+                timeout=self._timeout,
+                **kwargs,
+            )
+        except httpx.HTTPError as exc:
+            raise VoiceError(f"could not reach ElevenLabs: {exc}") from exc
+
+        if response.status_code >= 400:
+            raise VoiceError(f"ElevenLabs returned {response.status_code}: {response.text[:200]}")
+        return response
+
+    def signed_url(self, agent_id: str) -> str:
+        """A one-shot URL the browser SDK uses to join an agent call.
+
+        Signed rather than using the API key in the browser: the URL is only
+        good for this agent and expires quickly, so a visitor cannot lift a
+        key from the page and spend the account's credits directly.
+        """
+        response = self._get(
+            "/v1/convai/conversation/get-signed-url",
+            params={"agent_id": agent_id},
+        )
+        url = response.json().get("signed_url")
+        if not url:
+            raise VoiceError("ElevenLabs returned no signed_url")
+        return url
+
     def transcribe(self, audio: bytes, filename: str, content_type: str) -> str:
         """Audio bytes -> text. Returns an empty string if nothing was said."""
         response = self._post(
