@@ -1,16 +1,50 @@
-"""Shared test fixtures.
-
-Tests never touch the network: Supabase is replaced with an in-memory fake.
-"""
-
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from qdrant_client import QdrantClient
 
 from app.api.deps import supabase_client
 from app.main import app
+
+
+class FakeEmbedder:
+    """Deterministic bag-of-characters embedder.
+
+    Identical text always produces an identical unit vector and overlapping text
+    produces a higher cosine score, which is enough to exercise storage,
+    filtering and ranking without downloading a model or calling an API.
+    """
+
+    name = "fake-embedder"
+    dimension = 8
+
+    def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
+        return [self._vector(text) for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._vector(text)
+
+    @staticmethod
+    def _vector(text: str) -> list[float]:
+        vector = [0.0] * FakeEmbedder.dimension
+        for character in text.lower():
+            vector[ord(character) % FakeEmbedder.dimension] += 1.0
+        norm = sum(value * value for value in vector) ** 0.5 or 1.0
+        return [value / norm for value in vector]
+
+
+@pytest.fixture
+def fake_embedder() -> FakeEmbedder:
+    return FakeEmbedder()
+
+
+@pytest.fixture
+def memory_qdrant() -> QdrantClient:
+    """Real Qdrant behaviour, no network. Same API surface as Qdrant Cloud."""
+    return QdrantClient(location=":memory:")
 
 
 class FakeResult:

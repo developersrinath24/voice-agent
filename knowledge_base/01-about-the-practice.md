@@ -18,6 +18,14 @@ for a demo voice assistant. Everything on this page is invented.
 
 ## Opening hours
 
+The surgery closes at 18:30 from Monday to Friday. On Tuesday and Thursday it
+closes later, at 20:00, during extended hours. On Saturday it closes at 12:00,
+and it is closed all day on Sundays and on English bank holidays.
+
+Reception and the telephone lines are open from 08:00 each weekday. On Saturday
+mornings the front door is open for pre-booked appointments only; reception and
+the telephone lines are not staffed.
+
 | Day | Reception and phone lines | Appointments |
 | --- | --- | --- |
 | Monday | 08:00 to 18:30 | 08:00 to 18:30 |
@@ -27,10 +35,6 @@ for a demo voice assistant. Everything on this page is invented.
 | Friday | 08:00 to 18:30 | 08:00 to 18:30 |
 | Saturday | Closed | 09:00 to 12:00, pre-booked only |
 | Sunday and bank holidays | Closed | Closed |
-
-The surgery is closed on all English bank holidays. On Saturday mornings the
-front door is open but reception and the telephone lines are not staffed;
-patients attend pre-booked appointments only.
 
 ## Getting here
 

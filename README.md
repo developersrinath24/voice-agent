@@ -13,8 +13,8 @@ a technical interview.
 | --- | --- | --- |
 | 0 | Repo cleanup, config, tooling | Done |
 | 1 | Session/message persistence in Supabase | Done |
-| 2 | Knowledge base ingestion + Qdrant retrieval | Next |
-| 3 | Retrieval + answer quality evaluation | Planned |
+| 2 | Knowledge base ingestion + Qdrant retrieval | Done |
+| 3 | Retrieval + answer quality evaluation | Next |
 | 4 | LLM pipeline (DeepSeek primary, Gemini fallback) | Planned |
 | 5 | Speech-to-text / text-to-speech (ElevenLabs) | Planned |
 | 6 | Next.js voice client | Planned |
@@ -22,7 +22,8 @@ a technical interview.
 
 `POST /chat` currently returns a fixed message. It records both turns in
 Supabase, so session and history handling are real; the answer generation is
-not wired up yet.
+not wired up yet. Retrieval itself is real and can be exercised through
+`POST /search`.
 
 ## Architecture
 
@@ -87,6 +88,7 @@ uv run python -m app.database.test_connection
 | `GET` | `/sessions/{id}` | Session status and message count |
 | `GET` | `/sessions/{id}/messages` | Full ordered transcript |
 | `POST` | `/sessions/{id}/end` | Mark a session as ended |
+| `POST` | `/search` | Retrieval only: ranked chunks with scores and sources |
 | `POST` | `/voice/turn` | Reserved for the speech pipeline (returns 501 for now) |
 
 ## Project layout
@@ -100,7 +102,12 @@ app/
   database/client.py    Lazy Supabase client
   database/repositories.py  All queries for sessions and messages
   schemas/              Pydantic request/response models
-  rag/                  (empty) ingestion, embeddings, retrieval
+  rag/
+    chunking.py         Markdown -> chunks with stable IDs and metadata
+    embeddings.py       EmbeddingProvider protocol + local fastembed implementation
+    vector_store.py     Qdrant collection setup, upserts, search
+    retriever.py        Query -> ranked chunks; prompt context formatting
+    ingest.py           CLI for indexing the knowledge base
   services/             (empty) LLM clients, prompt assembly
   agents/               (empty) conversation orchestration
 db/migrations/          SQL migrations to run in Supabase
@@ -122,6 +129,25 @@ whole answer rather than an arbitrary slice of text.
 
 If you change the documents, re-run ingestion; chunk IDs are deterministic, so
 edits replace existing vectors instead of duplicating them.
+
+### Ingestion
+
+```bash
+uv run python -m app.rag.ingest             # incremental: replaces changed files
+uv run python -m app.rag.ingest --rebuild   # drop the collection and re-index
+```
+
+**Embeddings run locally** via `fastembed` and `BAAI/bge-small-en-v1.5`
+(384 dimensions, ~50 MB, downloaded on first use). No API key and no cost, which
+is what makes it practical to re-index on every document edit. Embeddings sit
+behind the `EmbeddingProvider` protocol in `app/rag/embeddings.py`, so swapping in
+Gemini or OpenAI means one class plus a `--rebuild`, because the vector size is
+fixed when the Qdrant collection is created.
+
+Retrieval is dense-only for now. Query prompts and document prompts are
+deliberately separate calls: bge models are trained with different instructions
+for each, and sending a query through the document path measurably hurts recall.
+
 
 ## Tests
 

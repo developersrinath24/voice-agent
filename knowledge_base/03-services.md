@@ -59,9 +59,23 @@ without seeing a GP first.
 
 ## What the practice does not provide
 
-- No A&E or emergency care
-- No X-rays or scans on site; these are arranged at Kingsmere General Hospital
-- No ear syringing; patients are referred to a community clinic
-- No yellow fever vaccination
-- No dentistry, optometry or physiotherapy on site; physiotherapy accepts
-  self-referral directly
+The practice does not provide A&E or emergency care. Patients with an emergency
+should call 999.
+
+The practice does not X-ray or scan patients on site. X-rays and scans are
+arranged at Kingsmere General Hospital.
+
+The practice does not offer ear syringing. Patients who need ear syringing are
+referred to a community clinic.
+
+The practice does not provide yellow fever vaccination. Patients are referred to
+a specialist travel clinic instead.
+
+The practice does not provide dentistry. Patients with toothache should contact a
+dentist, or call NHS 111 if they do not have one.
+
+The practice does not provide optometry. Patients should contact an optician for
+eye tests.
+
+The practice does not provide physiotherapy on site, but patients can refer
+themselves directly to NHS physiotherapy without seeing a GP first.
