@@ -9,6 +9,7 @@ from app.agents.clinic_assistant import ClinicAssistant
 from app.core.config import settings
 from app.database.client import get_supabase
 from app.services.llm import LLMNotConfigured, get_llm
+from app.services.voice import ElevenLabsClient, VoiceNotConfigured
 
 
 def require_api_key(x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None) -> None:
@@ -47,6 +48,22 @@ def clinic_assistant() -> ClinicAssistant:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@lru_cache
+def get_voice_client() -> ElevenLabsClient:
+    if not settings.ELEVENLABS_API_KEY:
+        raise VoiceNotConfigured("ELEVENLABS_API_KEY is not set")
+    return ElevenLabsClient(settings.ELEVENLABS_API_KEY)
+
+
+def voice_client() -> ElevenLabsClient:
+    """FastAPI dependency: speech-to-text and text-to-speech, or a clean 503."""
+    try:
+        return get_voice_client()
+    except VoiceNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 # Use in route signatures as:  client: SupabaseClient
 SupabaseClient = Annotated[Client, Depends(supabase_client)]
 Assistant = Annotated[ClinicAssistant, Depends(clinic_assistant)]
+Voice = Annotated[ElevenLabsClient, Depends(voice_client)]

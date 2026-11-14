@@ -10,7 +10,7 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient, models
 
 from app.agents.clinic_assistant import Answer
-from app.api.deps import clinic_assistant, supabase_client
+from app.api.deps import clinic_assistant, supabase_client, voice_client
 from app.core.config import settings
 from app.main import app
 
@@ -89,6 +89,34 @@ class FakeAssistant:
 @pytest.fixture
 def fake_assistant() -> FakeAssistant:
     return FakeAssistant()
+
+
+class FakeVoice:
+    """Stands in for ElevenLabs so tests never touch the network.
+
+    Records what went in and out, which is what the assertions are about: the
+    route's job is to connect speech to the chain and back, not to prove that
+    ElevenLabs works.
+    """
+
+    def __init__(self, transcript: str = "How long does a repeat prescription take?") -> None:
+        self.transcript = transcript
+        self.audio = b"ID3-fake-mp3-bytes"
+        self.transcribed: list[tuple[int, str]] = []
+        self.spoken: list[str] = []
+
+    def transcribe(self, audio: bytes, filename: str, content_type: str) -> str:
+        self.transcribed.append((len(audio), content_type))
+        return self.transcript
+
+    def synthesize(self, text: str) -> bytes:
+        self.spoken.append(text)
+        return self.audio
+
+
+@pytest.fixture
+def fake_voice() -> FakeVoice:
+    return FakeVoice()
 
 
 class FakeResult:
@@ -183,9 +211,14 @@ def fake_supabase() -> FakeSupabase:
 
 
 @pytest.fixture
-def client(fake_supabase: FakeSupabase, fake_assistant: FakeAssistant):
+def client(
+    fake_supabase: FakeSupabase,
+    fake_assistant: FakeAssistant,
+    fake_voice: FakeVoice,
+):
     app.dependency_overrides[supabase_client] = lambda: fake_supabase
     app.dependency_overrides[clinic_assistant] = lambda: fake_assistant
+    app.dependency_overrides[voice_client] = lambda: fake_voice
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

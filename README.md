@@ -16,7 +16,7 @@ a technical interview.
 | 2 | Knowledge base ingestion + Qdrant retrieval (LangChain) | Done |
 | 3 | RAG answer chain, DeepSeek primary / Gemini fallback | Done, needs an API key |
 | 4 | Retrieval and answer quality evaluation | Next |
-| 5 | Speech-to-text / text-to-speech (ElevenLabs) | Planned |
+| 5 | Speech-to-text / text-to-speech (ElevenLabs) | Turn-based `/voice/turn` done; realtime agent next |
 | 6 | Next.js voice client | Planned |
 | 7 | Deployment: Docker, Caddy, HTTPS, Oracle guide | Config ready, not yet deployed |
 
@@ -139,7 +139,7 @@ uv run python -m app.database.test_connection
 | `GET` | `/sessions/{id}/messages` | Full ordered transcript |
 | `POST` | `/sessions/{id}/end` | Mark a session as ended |
 | `POST` | `/search` | Retrieval only: ranked chunks with scores and sources |
-| `POST` | `/voice/turn` | Reserved for the speech pipeline (returns 501 for now) |
+| `POST` | `/voice/turn` | Audio in, spoken answer out (ElevenLabs Scribe + Flash TTS) |
 
 `/chat` returns `grounded` and a `sources` array, so a client can show *why* an
 answer was given and flag ungrounded replies for review.
@@ -148,6 +148,32 @@ When `API_KEY` is set, every endpoint except `/` and `/health` requires an
 `X-API-Key` header. `/health` stays open so a load balancer or uptime check needs
 no secret, and it reports which integrations are configured without exposing
 values.
+
+### Voice
+
+`POST /voice/turn` takes one recorded question and returns the transcript, the
+grounded answer, its sources, and the answer as base64 MP3 — the same shape as
+`/chat` plus audio, so a client can show what was heard and where the answer came
+from.
+
+```bash
+curl -X POST http://127.0.0.1:8000/voice/turn \
+  -H "X-API-Key: $API_KEY" \
+  -F "file=@question.webm;type=audio/webm" \
+  -o turn.json
+```
+
+It is deliberately turn-based: no barge-in, and the caller waits for the whole
+answer before hearing any of it. That is the honest v1 — it makes the seam
+between speech and knowledge visible before a realtime agent takes over the audio
+plumbing. `timings_ms` in the response reports where the time went, which is the
+number that matters when judging whether it feels like a conversation.
+
+Two provider details are pinned in tests because they are easy to lose: Scribe is
+asked for `tag_audio_events=false` (otherwise laughter and coughs arrive inline
+as `(laughter)`), and Flash v2.5 is asked for `apply_text_normalization=on`
+(because it is off by default for speed, and a clinic answer is mostly numbers —
+phone numbers, opening times, 999).
 
 ## Deployment
 
@@ -189,7 +215,8 @@ every other caller during a 2-second model call.
 app/
   main.py               FastAPI app, CORS, logging, router wiring
   core/config.py        Settings loaded from .env
-  api/deps.py           Shared dependencies (Supabase, assistant, 503 handling)
+  api/deps.py           Shared dependencies (Supabase, assistant, voice, 503 handling)
+  api/turns.py          Session resolution + history + user turn, shared by chat and voice
   api/routes/           health, chat, sessions, search, voice
   database/client.py    Lazy Supabase client
   database/repositories.py  All queries for sessions and messages
@@ -202,6 +229,7 @@ app/
     ingest.py           CLI for indexing the knowledge base
   services/
     llm.py              DeepSeek primary, Gemini fallback (with_fallbacks)
+    voice.py            ElevenLabs speech-to-text and text-to-speech
     prompts.py          System prompt and the not-found answer
   agents/
     clinic_assistant.py Retrieve -> ground -> answer chain

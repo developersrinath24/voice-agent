@@ -15,12 +15,19 @@ class ChatRequest(BaseModel):
     )
 
 
+from app.rag.retriever import RetrievedChunk
+
+
 class SourceRef(BaseModel):
     """One retrieved passage the answer was built from."""
 
     section: str
     source: str
     score: float
+
+    @classmethod
+    def from_chunk(cls, chunk: RetrievedChunk) -> "SourceRef":
+        return cls(section=chunk.section, source=chunk.source, score=round(chunk.score, 4))
 
 
 class ChatResponse(BaseModel):

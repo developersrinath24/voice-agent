@@ -32,9 +32,17 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-3.5-flash-lite"
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
-    # Voice
+    # Voice (ElevenLabs)
     ELEVENLABS_API_KEY: str = ""
     ELEVENLABS_AGENT_ID: str = ""
+    # Scribe v3 does recorded speech-to-text. Flash v2.5 is the low-latency TTS
+    # model; eleven_v4_turbo is more expressive at a higher price.
+    ELEVENLABS_STT_MODEL: str = "scribe_v3"
+    ELEVENLABS_TTS_MODEL: str = "eleven_flash_v2_5"
+    # "Rachel" — a neutral read. Swap for any voice id from your dashboard.
+    ELEVENLABS_VOICE_ID: str = "21m00Tcm4TlvDq8ikWAM"
+    # Stay under the 25 MB request body limit set in the Caddy configs.
+    VOICE_MAX_UPLOAD_BYTES: int = 20 * 1024 * 1024
 
     # Retrieval
     RETRIEVAL_TOP_K: int = 5
@@ -57,6 +65,10 @@ class Settings(BaseSettings):
     @property
     def qdrant_configured(self) -> bool:
         return bool(self.QDRANT_URL and self.QDRANT_API_KEY)
+
+    @property
+    def elevenlabs_configured(self) -> bool:
+        return bool(self.ELEVENLABS_API_KEY)
 
 
 @lru_cache

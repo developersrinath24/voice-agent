@@ -116,10 +116,6 @@ def test_messages_for_unknown_session_returns_404(client):
     assert response.status_code == 404
 
 
-def test_voice_endpoint_reports_not_implemented(client):
-    assert client.post("/voice/turn").status_code == 501
-
-
 def test_api_key_is_optional_locally(client, monkeypatch):
     monkeypatch.setattr(settings, "API_KEY", "")
     assert client.post("/sessions").status_code == 201
