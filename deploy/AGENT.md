@@ -101,9 +101,12 @@ sudo systemctl reload caddy
 
 ## 4. Create the agent in the dashboard
 
-One-time, in <https://elevenlabs.io>:
+One-time, at <https://elevenlabs.io/app/agents> — that direct link matters, because
+ElevenLabs now splits its product into **ElevenCreative** (voices, dubbing, music)
+and **ElevenAgents**. If the sidebar after login only shows voices and music, use the
+product switcher or the URL above; the Agents area is a separate app.
 
-1. **Agents → New agent → Blank agent.** Name it *Bramble Court Surgery*.
+1. **New agent → Blank agent.** Name it *Bramble Court Surgery*.
 2. **Voice**: Bella (`EXAVITQu4vr4xnSDxMaL`), model **Flash v2.5** — the
    low-latency model. Premade voices work on the free tier; most library voices
    return `402`.
@@ -150,6 +153,13 @@ brakes:
 | `VOICE_DAILY_CALL_LIMIT` | in-process counter in the API | `429` after N calls per UTC day |
 | agent max duration | ElevenLabs dashboard | backstop if a client ignores the UI |
 
+**The free ElevenAgents allowance is 15 call-minutes per month** (not per day), and
+LLM usage is billed separately on top. Ten 90-second calls per day would therefore
+exhaust it in under two days. For a demo that has to survive a week, set
+`VOICE_DAILY_CALL_LIMIT=3` and raise it on the day you are actually presenting.
+The agent also has a per-agent `daily_limit`; set it to the same number if you want
+the wall in both places.
+
 A call is only counted once ElevenLabs has returned a signed URL, so a failed
 handshake costs nothing. The counter is process memory: restarting the service
 resets it. That is deliberate — the failure mode is "the allowance came back",
@@ -159,6 +169,7 @@ never "the account was drained".
 
 | Symptom | Likely cause |
 | --- | --- |
+| No Agents option anywhere in the dashboard | You are in ElevenCreative, not ElevenAgents: open <https://elevenlabs.io/app/agents> directly, or check the workspace selector |
 | Call button says `503 … ELEVENLABS_AGENT_ID` | env not set, or service not restarted |
 | `429 … used its calls for today` | daily cap reached; wait for the UTC reset or use Chat |
 | Agent says "something went wrong" | `journalctl -u gp-voice-agent` — usually LLM quota or Qdrant |
